@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}New Timeframe{% endblock %}
+
+{% block body %}
+    <h1>Create new Timeframe</h1>
+
+    {{ include('timeframe/_form.html.twig') }}
+
+    <a href="{{ path('app_timeframe_index') }}">back to list</a>
+{% endblock %}

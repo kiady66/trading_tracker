@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Edit Trend{% endblock %}
+
+{% block body %}
+    <h1>Edit Trend</h1>
+
+    {{ include('trend/_form.html.twig', {'button_label': 'Update'}) }}
+
+    <a href="{{ path('app_trend_index') }}">back to list</a>
+
+    {{ include('trend/_delete_form.html.twig') }}
+{% endblock %}

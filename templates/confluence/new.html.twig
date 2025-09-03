@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}New Confluence{% endblock %}
+
+{% block body %}
+    <h1>Create new Confluence</h1>
+
+    {{ include('confluence/_form.html.twig') }}
+
+    <a href="{{ path('app_confluence_index') }}">back to list</a>
+{% endblock %}

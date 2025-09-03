@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Trading Tracker{% endblock %}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --light-bg: #f8f9fa;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--secondary-color) !important;
+        }
+
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            border-radius: 15px 15px 0 0 !important;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn {
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            padding: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+
+        .table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .table th {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            font-weight: 600;
+            border: none;
+        }
+
+        .badge {
+            border-radius: 20px;
+            padding: 8px 12px;
+            font-weight: 500;
+        }
+
+        .trade-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats-card {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .nav-link {
+            border-radius: 8px;
+            margin: 2px 0;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+    </style>
+
+    {% block stylesheets %}{% endblock %}
+</head>
+
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{{ path('app_trade_index') }}">
+            <i class="bi bi-graph-up"></i> Trading Tracker
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ path('app_trade_index') }}">
+                        <i class="bi bi-list-ul"></i> Mes Trades
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ path('app_trade_new') }}">
+                        <i class="bi bi-plus-circle"></i> Nouveau Trade
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-gear"></i> Configuration
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ path('app_timeframe_index') }}">Timeframes</a></li>
+                        <li><a class="dropdown-item" href="{{ path('app_confluence_index') }}">Confluences</a></li>
+                        <li><a class="dropdown-item" href="{{ path('app_setup_index') }}">Setups</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ path('app_trade_type_index') }}">Types de Trade</a></li>
+                        <li><a class="dropdown-item" href="{{ path('app_trend_index') }}">Tendances</a></li>
+                        <li><a class="dropdown-item" href="{{ path('app_result_index') }}">Résultats</a></li>
+                        <li><a class="dropdown-item" href="{{ path('app_trade_error_index') }}">Erreurs</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+
+    {% block body %}{% endblock %}
+</div>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // Validation des formulaires
+    document.addEventListener('DOMContentLoaded', function() {
+        // Enable Bootstrap validation
+        const forms = document.querySelectorAll('.needs-validation');
+        forms.forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        });
+
+        // Auto-calcul des champs
+        const riskPercentageInput = document.querySelector('#trade_riskPercentage');
+        const finalRRInput = document.querySelector('#trade_finalRR');
+        const maxRiskEuroInput = document.querySelector('#trade_maxRiskEuro');
+        const gainRRSpan = document.querySelector('#gain-rr');
+        const gainEuroSpan = document.querySelector('#gain-euro');
+
+        function calculateGains() {
+            if (riskPercentageInput && finalRRInput && maxRiskEuroInput) {
+                const riskPercentage = parseFloat(riskPercentageInput.value) || 0;
+                const finalRR = parseFloat(finalRRInput.value) || 0;
+                const maxRiskEuro = parseFloat(maxRiskEuroInput.value) || 0;
+
+                const gainRR = finalRR * (riskPercentage / 100);
+                const gainEuro = gainRR * maxRiskEuro;
+
+                if (gainRRSpan) gainRRSpan.textContent = gainRR.toFixed(2);
+                if (gainEuroSpan) gainEuroSpan.textContent = gainEuro.toFixed(2) + ' €';
+            }
+        }
+
+        [riskPercentageInput, finalRRInput, maxRiskEuroInput].forEach(input => {
+            if (input) {
+                input.addEventListener('input', calculateGains);
+            }
+        });
+
+        // Initial calculation
+        calculateGains();
+    });
+</script>
+
+{% block javascripts %}
+
+
+
+{% endblock %}
+</body>
+</html>

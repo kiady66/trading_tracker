@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Confluence{% endblock %}
+
+{% block body %}
+    <h1>Confluence</h1>
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <th>Id</th>
+                <td>{{ confluence.id }}</td>
+            </tr>
+            <tr>
+                <th>Name</th>
+                <td>{{ confluence.name }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_confluence_index') }}">back to list</a>
+
+    <a href="{{ path('app_confluence_edit', {'id': confluence.id}) }}">edit</a>
+
+    {{ include('confluence/_delete_form.html.twig') }}
+{% endblock %}
