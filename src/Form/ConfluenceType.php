@@ -15,11 +15,6 @@ class ConfluenceType extends AbstractType
     {
         $builder
             ->add('name')
-            ->add('trades', EntityType::class, [
-                'class' => Trade::class,
-                'choice_label' => 'id',
-                'multiple' => true,
-            ])
         ;
     }
 
