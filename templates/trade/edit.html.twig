@@ -1,0 +1,67 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier Trade{% endblock %}
+
+{% block body %}
+    <h1>Modifier le Trade</h1>
+
+    {{ form_start(form) }}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">Informations de base</div>
+                <div class="card-body">
+                    {{ form_row(form.asset) }}
+                    {{ form_row(form.watchlistDate) }}
+                    {{ form_row(form.entryDate) }}
+                    {{ form_row(form.exitDate) }}
+                    {{ form_row(form.orderType) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">Gestion du risque</div>
+                <div class="card-body">
+                    {{ form_row(form.riskPercentage) }}
+                    {{ form_row(form.maxRiskEuro) }}
+                    {{ form_row(form.initialRR) }}
+                    {{ form_row(form.finalRR) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">Analyse</div>
+                <div class="card-body">
+                    {{ form_row(form.timeframes) }}
+                    {{ form_row(form.tradeType) }}
+                    {{ form_row(form.trend) }}
+                    {{ form_row(form.confluences) }}
+                    {{ form_row(form.setups) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">Résultat</div>
+                <div class="card-body">
+                    {{ form_row(form.result) }}
+                    {{ form_row(form.tradeManagement) }}
+                    {{ form_row(form.error) }}
+                    {{ form_row(form.goodTrade) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn btn-primary">{{ button_label|default('Modifier') }}</button>
+    <a href="{{ path('app_trade_index') }}" class="btn btn-secondary">Retour à la liste</a>
+
+    {{ form_end(form) }}
+{% endblock %}

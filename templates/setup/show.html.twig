@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Setup{% endblock %}
+
+{% block body %}
+    <h1>Setup</h1>
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <th>Id</th>
+                <td>{{ setup.id }}</td>
+            </tr>
+            <tr>
+                <th>Name</th>
+                <td>{{ setup.name }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_setup_index') }}">back to list</a>
+
+    <a href="{{ path('app_setup_edit', {'id': setup.id}) }}">edit</a>
+
+    {{ include('setup/_delete_form.html.twig') }}
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des Trades - Trading Tracker{% endblock %}
+
+{% block body %}
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-list-ul text-primary"></i> Mes Trades
+                </h1>
+                <a href="{{ path('app_trade_new') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Nouveau Trade
+                </a>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <h6 class="text-muted">Total Trades</h6>
+                            <div class="stats-number">{{ trades|length }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <h6 class="text-muted">En Cours</h6>
+                            <div class="stats-number text-warning">{{ trades|filter(t => t.status == 'open')|length }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <h6 class="text-muted">Gagnants</h6>
+                            <div class="stats-number text-success">{{ trades|filter(t => t.result and t.result.name == 'Gagnant')|length }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card stats-card">
+                        <div class="card-body">
+                            <h6 class="text-muted">Perdants</h6>
+                            <div class="stats-number text-danger">{{ trades|filter(t => t.result and t.result.name == 'Perdant')|length }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>Actif</th>
+                                <th>Status</th>
+                                <th>Entrée</th>
+                                <th>Sortie</th>
+                                <th>Risk</th>
+                                <th>Gain €</th>
+                                <th>RR Final</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for trade in trades %}
+                                <tr class="align-middle">
+                                    <td>
+                                        <strong class="text-primary">{{ trade.asset }}</strong>
+                                        {% if trade.tradeType %}
+                                            <br><small class="text-muted">{{ trade.tradeType }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                    <span class="badge bg-{{
+                                    trade.status == 'watching' ? 'warning' :
+                                    (trade.status == 'open' ? 'info' : 'success')
+                                    }}">
+                                        {{ trade.status|capitalize }}
+                                    </span>
+                                    </td>
+                                    <td>
+                                        {% if trade.entryDate %}
+                                            <small>{{ trade.entryDate|date('d/m/Y H:i') }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if trade.exitDate %}
+                                            <small>{{ trade.exitDate|date('d/m/Y H:i') }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                    <span class="badge bg-light text-dark">
+                                        {{ trade.riskPercentage }}%
+                                    </span>
+                                    </td>
+                                    <td class="fw-bold {{
+                                    trade.gainEuro > 0 ? 'text-success' :
+                                    (trade.gainEuro < 0 ? 'text-danger' : 'text-muted')
+                                    }}">
+                                        {{ trade.gainEuro is not null ? trade.gainEuro|number_format(2) ~ ' €' : '-' }}
+                                    </td>
+                                    <td>
+                                        {% if trade.finalRR %}
+                                            <span class="badge bg-{{ trade.finalRR > 1 ? 'success' : 'warning' }}">
+                                            {{ trade.finalRR }}
+                                        </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ path('app_trade_show', {'id': trade.id}) }}"
+                                               class="btn btn-sm btn-outline-info"
+                                               title="Voir">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{{ path('app_trade_edit', {'id': trade.id}) }}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="Éditer">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <form action="{{ path('app_trade_delete', {'id': trade.id}) }}"
+                                                  method="post"
+                                                  class="d-inline"
+                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce trade ?');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ trade.id) }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="text-muted">
+                                            <i class="bi bi-inbox display-4"></i>
+                                            <h5 class="mt-3">Aucun trade trouvé</h5>
+                                            <p>Commencez par ajouter votre premier trade</p>
+                                            <a href="{{ path('app_trade_new') }}" class="btn btn-primary">
+                                                <i class="bi bi-plus-circle"></i> Ajouter un trade
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

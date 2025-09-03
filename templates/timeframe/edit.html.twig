@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Edit Timeframe{% endblock %}
+
+{% block body %}
+    <h1>Edit Timeframe</h1>
+
+    {{ include('timeframe/_form.html.twig', {'button_label': 'Update'}) }}
+
+    <a href="{{ path('app_timeframe_index') }}">back to list</a>
+
+    {{ include('timeframe/_delete_form.html.twig') }}
+{% endblock %}

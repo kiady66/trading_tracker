@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}New Trend{% endblock %}
+
+{% block body %}
+    <h1>Create new Trend</h1>
+
+    {{ include('trend/_form.html.twig') }}
+
+    <a href="{{ path('app_trend_index') }}">back to list</a>
+{% endblock %}

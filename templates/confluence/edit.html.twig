@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Edit Confluence{% endblock %}
+
+{% block body %}
+    <h1>Edit Confluence</h1>
+
+    {{ include('confluence/_form.html.twig', {'button_label': 'Update'}) }}
+
+    <a href="{{ path('app_confluence_index') }}">back to list</a>
+
+    {{ include('confluence/_delete_form.html.twig') }}
+{% endblock %}

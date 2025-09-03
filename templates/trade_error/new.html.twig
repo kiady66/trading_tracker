@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}New TradeError{% endblock %}
+
+{% block body %}
+    <h1>Create new TradeError</h1>
+
+    {{ include('trade_error/_form.html.twig') }}
+
+    <a href="{{ path('app_trade_error_index') }}">back to list</a>
+{% endblock %}
