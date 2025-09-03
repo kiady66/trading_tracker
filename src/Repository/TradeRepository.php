@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Trade;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\ORM\QueryBuilder;
 
 /**
  * @extends ServiceEntityRepository<Trade>
@@ -16,28 +17,191 @@ class TradeRepository extends ServiceEntityRepository
         parent::__construct($registry, Trade::class);
     }
 
-    //    /**
-    //     * @return Trade[] Returns an array of Trade objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('t')
-    //            ->andWhere('t.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('t.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function getStatistics(array $filters = [])
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->andWhere('t.result IS NOT NULL')
+            ->andWhere('t.exitDate IS NOT NULL');
 
-    //    public function findOneBySomeField($value): ?Trade
-    //    {
-    //        return $this->createQueryBuilder('t')
-    //            ->andWhere('t.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        $this->applyFilters($qb, $filters);
+
+        $trades = $qb->getQuery()->getResult();
+
+        $stats = [
+            'total_trades' => count($trades),
+            'winning_trades' => 0,
+            'losing_trades' => 0,
+            'total_gain_euro' => 0,
+            'total_gain_rr' => 0,
+            'winning_gain_euro' => 0,
+            'losing_gain_euro' => 0,
+            'max_win_euro' => 0,
+            'max_loss_euro' => 0,
+            'avg_win_euro' => 0,
+            'avg_loss_euro' => 0,
+            'avg_gain_rr' => 0,
+            'avg_win_rr' => 0,
+            'avg_loss_rr' => 0,
+        ];
+
+        $winningGains = [];
+        $losingGains = [];
+        $winningRR = [];
+        $losingRR = [];
+
+        foreach ($trades as $trade) {
+            $gainEuro = $trade->getGainEuro() ?? 0;
+            $finalRR = $trade->getFinalRR() ?? 0;
+
+            $stats['total_gain_euro'] += $gainEuro;
+            $stats['total_gain_rr'] += $finalRR;
+
+            if ($trade->getResult() && $trade->getResult()->getName() === 'Gagnant') {
+                $stats['winning_trades']++;
+                $stats['winning_gain_euro'] += $gainEuro;
+                $winningGains[] = $gainEuro;
+                $winningRR[] = $finalRR;
+
+                if ($gainEuro > $stats['max_win_euro']) {
+                    $stats['max_win_euro'] = $gainEuro;
+                }
+            } else {
+                $stats['losing_trades']++;
+                $stats['losing_gain_euro'] += $gainEuro;
+                $losingGains[] = $gainEuro;
+                $losingRR[] = $finalRR;
+
+                if ($gainEuro < $stats['max_loss_euro']) {
+                    $stats['max_loss_euro'] = $gainEuro;
+                }
+            }
+        }
+
+        // Calcul des moyennes
+        if ($stats['winning_trades'] > 0) {
+            $stats['avg_win_euro'] = $stats['winning_gain_euro'] / $stats['winning_trades'];
+            $stats['avg_win_rr'] = array_sum($winningRR) / count($winningRR);
+        }
+
+        if ($stats['losing_trades'] > 0) {
+            $stats['avg_loss_euro'] = $stats['losing_gain_euro'] / $stats['losing_trades'];
+            $stats['avg_loss_rr'] = array_sum($losingRR) / count($losingRR);
+        }
+
+        if ($stats['total_trades'] > 0) {
+            $stats['avg_gain_rr'] = $stats['total_gain_rr'] / $stats['total_trades'];
+            $stats['win_rate'] = ($stats['winning_trades'] / $stats['total_trades']) * 100;
+        }
+
+        return $stats;
+    }
+
+    public function getChartData(array $filters = [])
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->andWhere('t.result IS NOT NULL')
+            ->andWhere('t.exitDate IS NOT NULL')
+            ->orderBy('t.exitDate', 'ASC');
+
+        $this->applyFilters($qb, $filters);
+
+        $trades = $qb->getQuery()->getResult();
+
+        $dates = [];
+        $gainsEuro = [];
+        $cumulativeGains = [];
+        $finalRR = [];
+        $gainRR = [];
+        $cumulative = 0;
+
+        foreach ($trades as $trade) {
+            $date = $trade->getExitDate()->format('Y-m-d');
+            $gainEuro = $trade->getGainEuro() ?? 0;
+            $finalRRValue = $trade->getFinalRR() ?? 0;
+            $gainRRValue = $trade->getGainRR() ?? 0;
+
+            $dates[] = $date;
+            $gainsEuro[] = $gainEuro;
+            $finalRR[] = $finalRRValue;
+            $gainRR[] = $gainRRValue;
+
+            $cumulative += $gainEuro;
+            $cumulativeGains[] = $cumulative;
+        }
+
+        return [
+            'dates' => $dates,
+            'gains_euro' => $gainsEuro,
+            'cumulative_gains' => $cumulativeGains,
+            'final_rr' => $finalRR,
+            'gain_rr' => $gainRR,
+        ];
+    }
+
+    public function getConfluenceStats(array $filters = [])
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->leftJoin('t.confluences', 'c')
+            ->andWhere('t.result IS NOT NULL')
+            ->andWhere('t.exitDate IS NOT NULL');
+
+        $this->applyFilters($qb, $filters);
+
+        $trades = $qb->getQuery()->getResult();
+
+        $confluenceStats = [];
+
+        foreach ($trades as $trade) {
+            foreach ($trade->getConfluences() as $confluence) {
+                $confluenceName = $confluence->getName();
+
+                if (!isset($confluenceStats[$confluenceName])) {
+                    $confluenceStats[$confluenceName] = [
+                        'count' => 0,
+                        'wins' => 0,
+                        'total_gain' => 0,
+                        'total_rr' => 0,
+                    ];
+                }
+
+                $confluenceStats[$confluenceName]['count']++;
+                $confluenceStats[$confluenceName]['total_gain'] += $trade->getGainEuro() ?? 0;
+                $confluenceStats[$confluenceName]['total_rr'] += $trade->getFinalRR() ?? 0;
+
+                if ($trade->getResult() && $trade->getResult()->getName() === 'Gagnant') {
+                    $confluenceStats[$confluenceName]['wins']++;
+                }
+            }
+        }
+
+        // Calcul des pourcentages
+        foreach ($confluenceStats as &$stats) {
+            if ($stats['count'] > 0) {
+                $stats['win_rate'] = ($stats['wins'] / $stats['count']) * 100;
+                $stats['avg_gain'] = $stats['total_gain'] / $stats['count'];
+                $stats['avg_rr'] = $stats['total_rr'] / $stats['count'];
+            }
+        }
+
+        return $confluenceStats;
+    }
+
+    private function applyFilters(QueryBuilder $qb, array $filters): void
+    {
+        if (!empty($filters['start_date'])) {
+            $qb->andWhere('t.exitDate >= :start_date')
+                ->setParameter('start_date', new \DateTime($filters['start_date']));
+        }
+
+        if (!empty($filters['end_date'])) {
+            $qb->andWhere('t.exitDate <= :end_date')
+                ->setParameter('end_date', new \DateTime($filters['end_date'] . ' 23:59:59'));
+        }
+
+        if (!empty($filters['confluences'])) {
+            $qb->join('t.confluences', 'c_filter')
+                ->andWhere('c_filter.id IN (:confluences)')
+                ->setParameter('confluences', $filters['confluences']);
+        }
+    }
 }
