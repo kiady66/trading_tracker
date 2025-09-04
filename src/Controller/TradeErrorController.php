@@ -10,20 +10,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/trade/error')]
+#[Route('/trade-error')]
 final class TradeErrorController extends AbstractController
 {
-    #[Route(name: 'app_trade_error_index', methods: ['GET'])]
-    public function index(EntityManagerInterface $entityManager): Response
-    {
-        $tradeErrors = $entityManager
-            ->getRepository(TradeError::class)
-            ->findAll();
-
-        return $this->render('trade_error/index.html.twig', [
-            'trade_errors' => $tradeErrors,
-        ]);
-    }
 
     #[Route('/new', name: 'app_trade_error_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
@@ -52,6 +41,19 @@ final class TradeErrorController extends AbstractController
             'trade_error' => $tradeError,
         ]);
     }
+
+    #[Route(name: 'app_trade_error_index', methods: ['GET'])]
+    public function index(EntityManagerInterface $entityManager): Response
+    {
+        $tradeErrors = $entityManager
+            ->getRepository(TradeError::class)
+            ->findAll();
+
+        return $this->render('trade_error/index.html.twig', [
+            'trade_errors' => $tradeErrors,
+        ]);
+    }
+
 
     #[Route('/{id}/edit', name: 'app_trade_error_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, TradeError $tradeError, EntityManagerInterface $entityManager): Response

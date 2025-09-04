@@ -2,14 +2,12 @@
 
 namespace App\Form;
 
-use App\Entity\Setup;
-use App\Entity\Trade;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use App\Entity\TradeType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-class SetupType extends AbstractType
+class TradeTypeType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
@@ -21,7 +19,7 @@ class SetupType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => Setup::class,
+            'data_class' => TradeType::class,
         ]);
     }
 }

@@ -3,14 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\TradeType;
-use App\Form\TradeTypeForm;
+use App\Form\TradeTypeType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/trade/type')]
+#[Route('/trade-type')]
 final class TradeTypeController extends AbstractController
 {
     #[Route(name: 'app_trade_type_index', methods: ['GET'])]
@@ -29,7 +29,7 @@ final class TradeTypeController extends AbstractController
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $tradeType = new TradeType();
-        $form = $this->createForm(TradeTypeForm::class, $tradeType);
+        $form = $this->createForm(TradeTypeType::class, $tradeType);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -56,7 +56,7 @@ final class TradeTypeController extends AbstractController
     #[Route('/{id}/edit', name: 'app_trade_type_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, TradeType $tradeType, EntityManagerInterface $entityManager): Response
     {
-        $form = $this->createForm(TradeType::class, $tradeType);
+        $form = $this->createForm(TradeTypeType::class, $tradeType);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

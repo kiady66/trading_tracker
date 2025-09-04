@@ -60,6 +60,29 @@
         </div>
     </div>
 
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="bi bi-card-checklist"></i> Détails supplémentaires
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form_row(form.executionReason) }}
+                            {{ form_row(form.noteErrors) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.executionScreenshots) }}
+                            {{ form_row(form.managementScreenshots) }}
+                            {{ form_row(form.closingScreenshots) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <button class="btn btn-primary">{{ button_label|default('Modifier') }}</button>
     <a href="{{ path('app_trade_index') }}" class="btn btn-secondary">Retour à la liste</a>
 

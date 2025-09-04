@@ -280,6 +280,93 @@
                 </div>
             </div>
 
+            <!-- Nouvelle section pour les données supplémentaires -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-card-checklist"></i> Détails supplémentaires
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <!-- Colonne de gauche (1/3) - Textes -->
+                                <div class="col-lg-4">
+                                    <!-- Raison d'exécution -->
+                                    {% if trade.executionReason %}
+                                        <div class="mb-4">
+                                            <h6 class="fw-bold">Raison:</h6>
+                                            <p class="text-muted small">{{ trade.executionReason|nl2br }}</p>
+                                        </div>
+                                    {% endif %}
+
+                                    <!-- Erreurs -->
+                                    {% if trade.noteErrors %}
+                                        <div class="mb-4">
+                                            <h6 class="fw-bold">Erreurs:</h6>
+                                            <p class="text-muted small">{{ trade.noteErrors|nl2br }}</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Colonne de droite (2/3) - Images (pleine largeur) -->
+                                <div class="col-lg-8">
+                                    <!-- Screenshots Execution -->
+                                    {% if trade.executionScreenshots %}
+                                        <div class="mb-4">
+                                            <h6 class="fw-bold mb-3">Screenshots Exécution:</h6>
+                                            <div class="row g-2">
+                                                {% for screenshot in trade.executionScreenshots %}
+                                                    <div class="col-auto">
+                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot) }}"
+                                                             class="img-thumbnail"
+                                                             style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
+                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot) }}')">
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    <!-- Screenshots Management -->
+                                    {% if trade.managementScreenshots %}
+                                        <div class="mb-4">
+                                            <h6 class="fw-bold mb-3">Screenshots Management:</h6>
+                                            <div class="row g-2">
+                                                {% for screenshot in trade.managementScreenshots %}
+                                                    <div class="col-auto">
+                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot) }}"
+                                                             class="img-thumbnail"
+                                                             style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
+                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot) }}')">
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    <!-- Screenshots Clôture -->
+                                    {% if trade.closingScreenshots %}
+                                        <div class="mb-4">
+                                            <h6 class="fw-bold mb-3">Screenshots Clôture:</h6>
+                                            <div class="row g-2">
+                                                {% for screenshot in trade.closingScreenshots %}
+                                                    <div class="col-auto">
+                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot) }}"
+                                                             class="img-thumbnail"
+                                                             style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
+                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot) }}')">
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>>
+
             <!-- Actions -->
             <div class="card">
                 <div class="card-body text-center">
@@ -302,4 +389,33 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 95vw;">
+            <div class="modal-content" style="height: 95vh;">
+                <div class="modal-header">
+                    <h5 class="modal-title">Visualisation de l'image</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-0 d-flex align-items-center justify-content-center">
+                    <img src="" id="modalImage" class="img-fluid" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                </div>
+            </div>
+        </div>
+    </div>>
+{% endblock %}
+
+{% block javascripts %}
+    <script>
+        function openModal(imageSrc) {
+            const modalImage = document.getElementById('modalImage');
+            const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+
+            if (modalImage) {
+                modalImage.src = imageSrc;
+                imageModal.show();
+            }
+        }
+    </script>
+
 {% endblock %}

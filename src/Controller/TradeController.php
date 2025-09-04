@@ -5,8 +5,10 @@ namespace App\Controller;
 use App\Entity\Trade;
 use App\Form\TradeTypeForm;
 use App\Repository\TradeRepository;
+use App\Service\FileUploader;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -23,13 +25,16 @@ class TradeController extends AbstractController
     }
 
     #[Route('/new', name: 'app_trade_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, EntityManagerInterface $entityManager, FileUploader $fileUploader): Response
     {
         $trade = new Trade();
         $form = $this->createForm(TradeTypeForm::class, $trade);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+
+            $this->handleFileUploads($form, $trade, $fileUploader);
+
             $trade->calculateStatus();
             $trade->calculateDay();
             $trade->calculateGainRR();
@@ -58,12 +63,15 @@ class TradeController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_trade_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Trade $trade, EntityManagerInterface $entityManager): Response
+    public function edit(Request $request, Trade $trade, EntityManagerInterface $entityManager, FileUploader $fileUploader): Response
     {
         $form = $this->createForm(TradeTypeForm::class, $trade);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+
+            $this->handleFileUploads($form, $trade, $fileUploader);
+
             $trade->calculateStatus();
             $trade->calculateDay();
             $trade->calculateGainRR();
@@ -92,5 +100,35 @@ class TradeController extends AbstractController
         }
 
         return $this->redirectToRoute('app_trade_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    private function handleFileUploads($form, $trade, $fileUploader): void
+    {
+        $screenshotTypes = [
+            'executionScreenshots' => 'executionScreenshots',
+            'managementScreenshots' => 'managementScreenshots',
+            'closingScreenshots' => 'closingScreenshots'
+        ];
+
+        foreach ($screenshotTypes as $formField => $property) {
+            $files = $form->get($formField)->getData();
+            $filenames = [];
+
+            if ($files) {
+                foreach ($files as $file) {
+                    if ($file instanceof UploadedFile) {
+                        $filename = $fileUploader->upload($file);
+                        $fileUploader->compressImage(
+                            $fileUploader->getTargetDirectory() . '/' . $filename,
+                            85
+                        );
+                        $filenames[] = $filename;
+                    }
+                }
+
+                $setter = 'set' . ucfirst($property);
+                $trade->$setter($filenames);
+            }
+        }
     }
 }
