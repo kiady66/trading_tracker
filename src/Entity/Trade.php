@@ -82,6 +82,21 @@ class Trade
     #[ORM\ManyToMany(targetEntity: Setup::class, inversedBy: 'trades')]
     private Collection $setups;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $executionReason = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $noteErrors = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $executionScreenshots = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $managementScreenshots = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $closingScreenshots = null;
+
     public function __construct()
     {
         $this->timeframes = new ArrayCollection();
@@ -408,5 +423,60 @@ class Trade
         if ($this->gainRR !== null && $this->maxRiskEuro !== null) {
             $this->gainEuro = $this->gainRR * $this->maxRiskEuro;
         }
+    }
+
+    public function getExecutionReason(): ?string
+    {
+        return $this->executionReason;
+    }
+
+    public function setExecutionReason(?string $executionReason): self
+    {
+        $this->executionReason = $executionReason;
+        return $this;
+    }
+
+    public function getNoteErrors(): ?string
+    {
+        return $this->noteErrors;
+    }
+
+    public function setNoteErrors(?string $noteErrors): self
+    {
+        $this->noteErrors = $noteErrors;
+        return $this;
+    }
+
+    public function getExecutionScreenshots(): ?array
+    {
+        return $this->executionScreenshots;
+    }
+
+    public function setExecutionScreenshots(?array $executionScreenshots): self
+    {
+        $this->executionScreenshots = $executionScreenshots;
+        return $this;
+    }
+
+    public function getManagementScreenshots(): ?array
+    {
+        return $this->managementScreenshots;
+    }
+
+    public function setManagementScreenshots(?array $managementScreenshots): self
+    {
+        $this->managementScreenshots = $managementScreenshots;
+        return $this;
+    }
+
+    public function getClosingScreenshots(): ?array
+    {
+        return $this->closingScreenshots;
+    }
+
+    public function setClosingScreenshots(?array $closingScreenshots): self
+    {
+        $this->closingScreenshots = $closingScreenshots;
+        return $this;
     }
 }

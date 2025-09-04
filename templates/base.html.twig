@@ -124,6 +124,36 @@
         .nav-link:hover {
             background-color: rgba(52, 152, 219, 0.1);
         }
+
+        .dropzone {
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .dropzone:hover {
+            border-color: #007bff;
+        }
+
+        .dropzone.dragover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+
+        .preview-container {
+            margin-top: 15px;
+        }
+
+        .preview-image {
+            max-width: 100px;
+            max-height: 100px;
+            margin: 5px;
+            border-radius: 5px;
+        }
+
     </style>
 
     {% block stylesheets %}{% endblock %}

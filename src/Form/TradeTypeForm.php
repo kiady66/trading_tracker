@@ -11,6 +11,8 @@ use App\Entity\TradeType as EntityTradeType;
 use App\Entity\Trend;
 use App\Entity\Result;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -123,6 +125,32 @@ class TradeTypeForm extends AbstractType
                 'expanded' => true,
                 'choice_label' => 'name',
                 'label' => 'Setups'
+            ])->add('executionReason', TextareaType::class, [
+                'required' => false,
+                'label' => 'Raison d\'exécution',
+                'attr' => ['rows' => 4]
+            ])
+            ->add('noteErrors', TextareaType::class, [
+                'required' => false,
+                'label' => 'Notes sur les erreurs',
+                'attr' => ['rows' => 4]
+            ])
+            ->add('executionScreenshots', FileType::class, [
+                'required' => false,
+                'multiple' => true,
+                'mapped' => false,
+                'label' => 'Screenshots d\'exécution'
+            ])->add('managementScreenshots', FileType::class, [
+                'required' => false,
+                'multiple' => true,
+                'mapped' => false,
+                'label' => 'Screenshots de management'
+            ])
+            ->add('closingScreenshots', FileType::class, [
+                'required' => false,
+                'multiple' => true,
+                'mapped' => false,
+                'label' => 'Screenshots de clôture'
             ]);
     }
 
