@@ -50,10 +50,10 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Confluences</label>
-                            <select name="confluences[]" class="form-select select2-confluences" multiple>
+                            <select name="confluences[]" multiple>
                                 {% for confluence in all_confluences %}
                                     <option value="{{ confluence.id }}"
-                                        {{ confluence.id in filters.confluences ? 'selected' : '' }}>
+                                            {% if confluence.id in filters.confluences|default([]) %}selected{% endif %}>
                                         {{ confluence.name }}
                                     </option>
                                 {% endfor %}
