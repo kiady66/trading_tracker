@@ -120,7 +120,7 @@ class TradeController extends AbstractController
                         $filename = $fileUploader->upload($file);
                         $fileUploader->compressImage(
                             $fileUploader->getTargetDirectory() . '/' . $filename,
-                            85
+                           60
                         );
                         $filenames[] = $filename;
                     }
