@@ -21,12 +21,14 @@ class StatsController extends AbstractController
         $filters = [
             'start_date' => $request->query->get('start_date'),
             'end_date' => $request->query->get('end_date'),
-            'confluences' => $request->query->get('confluences'),
+            'confluences' => $request->query->all('confluences'),
         ];
 
         $stats = $tradeRepository->getStatistics($filters);
         $chartData = $tradeRepository->getChartData($filters);
         $confluenceStats = $tradeRepository->getConfluenceStats($filters);
+
+        dump($confluenceStats); // Debugging line to inspect the data structure
 
         $allConfluences = $confluenceRepository->findAll();
 

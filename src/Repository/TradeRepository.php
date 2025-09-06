@@ -199,9 +199,15 @@ class TradeRepository extends ServiceEntityRepository
         }
 
         if (!empty($filters['confluences'])) {
-            $qb->join('t.confluences', 'c_filter')
-                ->andWhere('c_filter.id IN (:confluences)')
-                ->setParameter('confluences', $filters['confluences']);
+            $confluences = is_array($filters['confluences']) ? $filters['confluences'] : [$filters['confluences']];
+
+            // Pour chaque confluence, ajoutez une jointure et une condition
+            foreach ($confluences as $index => $confluenceId) {
+                $alias = 'c_filter_' . $index;
+                $qb->join('t.confluences', $alias)
+                    ->andWhere($alias . '.id = :confluence_' . $index)
+                    ->setParameter('confluence_' . $index, $confluenceId);
+            }
         }
     }
 }
