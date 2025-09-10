@@ -26,15 +26,19 @@ class TradeController extends AbstractController
         ]);
     }
 
+
     #[Route('/new', name: 'app_trade_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager, FileUploader $fileUploader): Response
     {
         $trade = new Trade();
+
+        // Ajoutez cette ligne pour assigner l'utilisateur connecté
+        $trade->setUser($this->getUser());
+
         $form = $this->createForm(TradeTypeForm::class, $trade);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-
             $this->handleFileUploads($form, $trade, $fileUploader);
 
             $trade->calculateStatus();
