@@ -210,4 +210,62 @@ class TradeRepository extends ServiceEntityRepository
             }
         }
     }
+
+    public function getDayStats(array $filters = [])
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->select([
+                't.day',
+                'COUNT(t.id) as total_trades',
+                'SUM(CASE WHEN r.name = :win_name THEN 1 ELSE 0 END) as winning_trades',
+                'SUM(t.gainEuro) as total_gain_euro',
+                'SUM(t.gainRR) as total_gain_rr',
+                'AVG(t.gainEuro) as avg_gain_euro',
+                'AVG(t.gainRR) as avg_gain_rr'
+            ])
+            ->leftJoin('t.result', 'r')
+            ->andWhere('t.result IS NOT NULL')
+            ->andWhere('t.exitDate IS NOT NULL')
+            ->andWhere('t.day IS NOT NULL')
+            ->groupBy('t.day')
+            ->setParameter('win_name', 'Gagnant');
+
+        $this->applyFilters($qb, $filters);
+
+        $results = $qb->getQuery()->getResult();
+
+        // Organiser par jours de la semaine dans l'ordre
+        $daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        $dayStats = [];
+
+        foreach ($daysOrder as $day) {
+            $dayStats[$day] = [
+                'total_trades' => 0,
+                'winning_trades' => 0,
+                'total_gain_euro' => 0,
+                'total_gain_rr' => 0,
+                'avg_gain_euro' => 0,
+                'avg_gain_rr' => 0,
+                'win_rate' => 0
+            ];
+        }
+
+        foreach ($results as $result) {
+            $day = $result['day'];
+            if (isset($dayStats[$day])) {
+                $dayStats[$day] = [
+                    'total_trades' => (int)$result['total_trades'],
+                    'winning_trades' => (int)$result['winning_trades'],
+                    'total_gain_euro' => (float)$result['total_gain_euro'],
+                    'total_gain_rr' => (float)$result['total_gain_rr'],
+                    'avg_gain_euro' => (float)$result['avg_gain_euro'],
+                    'avg_gain_rr' => (float)$result['avg_gain_rr'],
+                    'win_rate' => $result['total_trades'] > 0 ?
+                        ((int)$result['winning_trades'] / (int)$result['total_trades']) * 100 : 0
+                ];
+            }
+        }
+
+        return $dayStats;
+    }
 }

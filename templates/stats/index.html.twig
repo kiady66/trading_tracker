@@ -275,6 +275,59 @@
                     </div>
                 </div>
             {% endif %}
+
+            <!-- Section Statistiques par jour -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title">Performance par jour de la semaine</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                    <tr>
+                                        <th>Jour</th>
+                                        <th>Nombre de trades</th>
+                                        <th>Taux de réussite</th>
+                                        <th>Gain total (€)</th>
+                                        <th>Gain moyen (€)</th>
+                                        <th>Gain total (R)</th>
+                                        <th>Gain moyen (R)</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for day, stats in day_stats %}
+                                        <tr>
+                                            <td>{{ day|trans }}</td>
+                                            <td>{{ stats.total_trades }}</td>
+                                            <td>
+                                    <span class="badge bg-{{ stats.win_rate >= 50 ? 'success' : 'warning' }}">
+                                        {{ stats.win_rate|number_format(1) }}%
+                                    </span>
+                                            </td>
+                                            <td class="{{ stats.total_gain_euro >= 0 ? 'text-success' : 'text-danger' }}">
+                                                {{ stats.total_gain_euro|number_format(2) }} €
+                                            </td>
+                                            <td class="{{ stats.avg_gain_euro >= 0 ? 'text-success' : 'text-danger' }}">
+                                                {{ stats.avg_gain_euro|number_format(2) }} €
+                                            </td>
+                                            <td class="{{ stats.total_gain_rr >= 0 ? 'text-success' : 'text-danger' }}">
+                                                {{ stats.total_gain_rr|number_format(2) }} R
+                                            </td>
+                                            <td class="{{ stats.avg_gain_rr >= 0 ? 'text-success' : 'text-danger' }}">
+                                                {{ stats.avg_gain_rr|number_format(2) }} R
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}
