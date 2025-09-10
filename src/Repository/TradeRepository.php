@@ -188,6 +188,11 @@ class TradeRepository extends ServiceEntityRepository
 
     private function applyFilters(QueryBuilder $qb, array $filters): void
     {
+        if (!empty($filters['user'])) {
+            $qb->andWhere('t.user = :user')
+                ->setParameter('user', $filters['user']);
+        }
+
         if (!empty($filters['start_date'])) {
             $qb->andWhere('t.exitDate >= :start_date')
                 ->setParameter('start_date', new \DateTime($filters['start_date']));

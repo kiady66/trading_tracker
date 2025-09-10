@@ -97,6 +97,11 @@ class Trade
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $closingScreenshots = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'trades')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $user = null;
+
+
     public function __construct()
     {
         $this->timeframes = new ArrayCollection();
@@ -477,6 +482,17 @@ class Trade
     public function setClosingScreenshots(?array $closingScreenshots): self
     {
         $this->closingScreenshots = $closingScreenshots;
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): self
+    {
+        $this->user = $user;
         return $this;
     }
 }

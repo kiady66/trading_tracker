@@ -167,44 +167,76 @@
             <i class="bi bi-graph-up"></i> Trading Tracker
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        {% if app.user %}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ path('app_trade_index') }}">
-                        <i class="bi bi-list-ul"></i> Mes Trades
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ path('app_trade_new') }}">
-                        <i class="bi bi-plus-circle"></i> Nouveau Trade
-                    </a>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-gear"></i> Configuration
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ path('app_timeframe_index') }}">Timeframes</a></li>
-                        <li><a class="dropdown-item" href="{{ path('app_confluence_index') }}">Confluences</a></li>
-                        <li><a class="dropdown-item" href="{{ path('app_setup_index') }}">Setups</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{{ path('app_trade_type_index') }}">Types de Trade</a></li>
-                        <li><a class="dropdown-item" href="{{ path('app_trend_index') }}">Tendances</a></li>
-                        <li><a class="dropdown-item" href="{{ path('app_result_index') }}">Résultats</a></li>
-                        <li><a class="dropdown-item" href="{{ path('app_trade_error_index') }}">Erreurs</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ path('app_stats') }}">
-                        <i class="bi bi-bar-chart"></i> Statistiques
-                    </a>
-                </li>
-            </ul>
-        </div>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ path('app_trade_index') }}">
+                            <i class="bi bi-list-ul"></i> Mes Trades
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ path('app_trade_new') }}">
+                            <i class="bi bi-plus-circle"></i> Nouveau Trade
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-gear"></i> Configuration
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ path('app_timeframe_index') }}">Timeframes</a></li>
+                            <li><a class="dropdown-item" href="{{ path('app_confluence_index') }}">Confluences</a></li>
+                            <li><a class="dropdown-item" href="{{ path('app_setup_index') }}">Setups</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ path('app_trade_type_index') }}">Types de Trade</a></li>
+                            <li><a class="dropdown-item" href="{{ path('app_trend_index') }}">Tendances</a></li>
+                            <li><a class="dropdown-item" href="{{ path('app_result_index') }}">Résultats</a></li>
+                            <li><a class="dropdown-item" href="{{ path('app_trade_error_index') }}">Erreurs</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ path('app_stats') }}">
+                            <i class="bi bi-bar-chart"></i> Statistiques
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Boutons de connexion/déconnexion à droite -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> {{ app.user.email }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#">
+                                    <i class="bi bi-person"></i> Mon profil
+                                </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{{ path('app_logout') }}">
+                                    <i class="bi bi-box-arrow-right"></i> Déconnexion
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        {% else %}
+            <!-- Boutons de connexion/inscription quand non connecté -->
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ path('app_login') }}">
+                    <i class="bi bi-box-arrow-in-right"></i> Connexion
+                </a>
+                <a class="nav-link" href="{{ path('app_register') }}">
+                    <i class="bi bi-person-plus"></i> Inscription
+                </a>
+            </div>
+        {% endif %}
     </div>
 </nav>
 
@@ -276,10 +308,6 @@
     });
 </script>
 
-{% block javascripts %}
-
-
-
-{% endblock %}
+{% block javascripts %}{% endblock %}
 </body>
 </html>
