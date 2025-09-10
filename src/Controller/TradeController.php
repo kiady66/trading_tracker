@@ -20,7 +20,7 @@ class TradeController extends AbstractController
     public function index(TradeRepository $tradeRepository): Response
     {
         return $this->render('trade/index.html.twig', [
-            'trades' => $tradeRepository->findAll(),
+            'trades' => $tradeRepository->findBy([], ['entryDate' => 'DESC']),
         ]);
     }
 
@@ -120,7 +120,7 @@ class TradeController extends AbstractController
                         $filename = $fileUploader->upload($file);
                         $fileUploader->compressImage(
                             $fileUploader->getTargetDirectory() . '/' . $filename,
-                           60
+                          30
                         );
                         $filenames[] = $filename;
                     }
