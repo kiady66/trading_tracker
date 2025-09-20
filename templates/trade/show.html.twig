@@ -280,6 +280,10 @@
                 </div>
             </div>
 
+            {# Dans show.html.twig #}
+
+            <!-- Remplacez toute la section des screenshots par ceci : -->
+
             <!-- Nouvelle section pour les données supplémentaires -->
             <div class="row">
                 <div class="col-12">
@@ -311,16 +315,17 @@
                                 <!-- Colonne de droite (2/3) - Images (pleine largeur) -->
                                 <div class="col-lg-8">
                                     <!-- Screenshots Execution -->
-                                    {% if trade.executionScreenshots %}
+                                    {% if screenshotsByCategory.execution is not empty %}
                                         <div class="mb-4">
                                             <h6 class="fw-bold mb-3">Screenshots Exécution:</h6>
                                             <div class="row g-2">
-                                                {% for screenshot in trade.executionScreenshots %}
+                                                {% for screenshot in screenshotsByCategory.execution %}
                                                     <div class="col-auto">
-                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot) }}"
+                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}"
                                                              class="img-thumbnail"
                                                              style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
-                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot) }}')">
+                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot.filename) }}')"
+                                                             alt="Screenshot exécution {{ loop.index }}">
                                                     </div>
                                                 {% endfor %}
                                             </div>
@@ -328,16 +333,17 @@
                                     {% endif %}
 
                                     <!-- Screenshots Management -->
-                                    {% if trade.managementScreenshots %}
+                                    {% if screenshotsByCategory.management is not empty %}
                                         <div class="mb-4">
                                             <h6 class="fw-bold mb-3">Screenshots Management:</h6>
                                             <div class="row g-2">
-                                                {% for screenshot in trade.managementScreenshots %}
+                                                {% for screenshot in screenshotsByCategory.management %}
                                                     <div class="col-auto">
-                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot) }}"
+                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}"
                                                              class="img-thumbnail"
                                                              style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
-                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot) }}')">
+                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot.filename) }}')"
+                                                             alt="Screenshot management {{ loop.index }}">
                                                     </div>
                                                 {% endfor %}
                                             </div>
@@ -345,16 +351,17 @@
                                     {% endif %}
 
                                     <!-- Screenshots Clôture -->
-                                    {% if trade.closingScreenshots %}
+                                    {% if screenshotsByCategory.closing is not empty %}
                                         <div class="mb-4">
                                             <h6 class="fw-bold mb-3">Screenshots Clôture:</h6>
                                             <div class="row g-2">
-                                                {% for screenshot in trade.closingScreenshots %}
+                                                {% for screenshot in screenshotsByCategory.closing %}
                                                     <div class="col-auto">
-                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot) }}"
+                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}"
                                                              class="img-thumbnail"
                                                              style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
-                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot) }}')">
+                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot.filename) }}')"
+                                                             alt="Screenshot clôture {{ loop.index }}">
                                                     </div>
                                                 {% endfor %}
                                             </div>
@@ -365,7 +372,7 @@
                         </div>
                     </div>
                 </div>
-            </div>>
+            </div>
 
             <!-- Actions -->
             <div class="card">

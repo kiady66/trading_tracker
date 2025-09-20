@@ -3,118 +3,319 @@
 {% block title %}Nouveau Trade - Trading Tracker{% endblock %}
 
 {% block body %}
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3 mb-0">
-                    <i class="bi bi-plus-circle text-primary"></i> Créer un nouveau Trade
-                </h1>
-                <a href="{{ path('app_trade_index') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Retour
-                </a>
-            </div>
-
-            {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate'}}) }}
-
-            <div class="row">
-                <!-- Informations de base -->
-                <div class="col-lg-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-info-circle"></i> Informations de base
-                        </div>
-                        <div class="card-body">
-                            {{ form_row(form.asset, {'attr': {'class': 'form-control-lg'}}) }}
-                            {{ form_row(form.watchlistDate) }}
-                            {{ form_row(form.entryDate) }}
-                            {{ form_row(form.exitDate) }}
-                            {{ form_row(form.orderType) }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Gestion du risque -->
-                <div class="col-lg-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-graph-up"></i> Gestion du risque
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    {{ form_row(form.riskPercentage) }}
-                                </div>
-                                <div class="col-md-6">
-                                    {{ form_row(form.maxRiskEuro) }}
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    {{ form_row(form.initialRR) }}
-                                </div>
-                                <div class="col-md-6">
-                                    {{ form_row(form.finalRR) }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <!-- Analyse -->
-                <div class="col-lg-4">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-bar-chart"></i> Analyse technique
-                        </div>
-                        <div class="card-body">
-                            {{ form_row(form.timeframes) }}
-                            {{ form_row(form.tradeType) }}
-                            {{ form_row(form.trend) }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Confluences & Setups -->
-                <div class="col-lg-4">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-lightning-charge"></i> Stratégie
-                        </div>
-                        <div class="card-body">
-                            {{ form_row(form.confluences) }}
-                            {{ form_row(form.setups) }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Résultat -->
-                <div class="col-lg-4">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-trophy"></i> Résultat
-                        </div>
-                        <div class="card-body">
-                            {{ form_row(form.result) }}
-                            {{ form_row(form.tradeManagement) }}
-                            {{ form_row(form.error) }}
-                            {{ form_row(form.goodTrade) }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="bi bi-check-circle"></i> {{ button_label|default('Créer le trade') }}
-                </button>
-                <a href="{{ path('app_trade_index') }}" class="btn btn-outline-secondary btn-lg">
-                    <i class="bi bi-x-circle"></i> Annuler
-                </a>
-            </div>
-
-            {{ form_end(form) }}
+    <div class="container-fluid py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0">
+                <i class="bi bi-plus-circle text-primary"></i> Créer un nouveau Trade
+            </h1>
+            <a href="{{ path('app_trade_index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Retour
+            </a>
         </div>
+
+        {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novvidate'}}) }}
+
+        <div class="row">
+            <!-- Informations de base -->
+            <div class="col-lg-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="bi bi-info-circle"></i> Informations de base</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form_row(form.asset, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_row(form.watchlistDate, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_row(form.entryDate, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_row(form.exitDate, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_row(form.orderType, {'attr': {'class': 'form-control'}}) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gestion du risque -->
+            <div class="col-lg-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="bi bi-graph-up"></i> Gestion du risque</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form_row(form.riskPercentage, {'attr': {'class': 'form-control'}}) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_row(form.maxRiskEuro, {'attr': {'class': 'form-control'}}) }}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form_row(form.initialRR, {'attr': {'class': 'form-control'}}) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_row(form.finalRR, {'attr': {'class': 'form-control'}}) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Analyse -->
+            <div class="col-lg-4">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="bi bi-bar-chart"></i> Analyse technique</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form_row(form.timeframes, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_row(form.tradeType, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_row(form.trend, {'attr': {'class': 'form-control'}}) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confluences & Setups -->
+            <div class="col-lg-4">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="bi bi-lightning-charge"></i> Stratégie</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form_label(form.confluences, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            <div class="checkbox-group">
+                                {% for confluence in form.confluences %}
+                                    <div class="form-check mb-2">
+                                        {{ form_widget(confluence, {'attr': {'class': 'form-check-input'}}) }}
+                                        {{ form_label(confluence, null, {'label_attr': {'class': 'form-check-label'}}) }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.setups, null, {'label_attr': {'class': 'form-label fw-bold mb-2 d-block'}}) }}
+                            <div class="checkbox-group">
+                                {% for setup in form.setups %}
+                                    <div class="form-check mb-2">
+                                        {{ form_widget(setup, {'attr': {'class': 'form-check-input'}}) }}
+                                        {{ form_label(setup, null, {'label_attr': {'class': 'form-check-label'}}) }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Résultat -->
+            <div class="col-lg-4">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="bi bi-trophy"></i> Résultat</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form_row(form.result, {'attr': {'class': 'form-control'}}) }}
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form_widget(form.tradeManagement, {'attr': {'class': 'form-check-input'}}) }}
+                                {{ form_label(form.tradeManagement, null, {'label_attr': {'class': 'form-check-label fw-bold'}}) }}
+                            </div>
+                        </div>
+                        {{ form_row(form.error, {'attr': {'class': 'form-control'}}) }}
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form_widget(form.goodTrade, {'attr': {'class': 'form-check-input'}}) }}
+                                {{ form_label(form.goodTrade, null, {'label_attr': {'class': 'form-check-label fw-bold'}}) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="bi bi-card-checklist"></i> Détails supplémentaires</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form_label(form.executionReason, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                                    {{ form_widget(form.executionReason, {'attr': {'class': 'form-control', 'rows': 4}}) }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form_label(form.noteErrors, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                                    {{ form_widget(form.noteErrors, {'attr': {'class': 'form-control', 'rows': 4}}) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Screenshots pour la création -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Screenshots d'exécution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="screenshot-manager" data-category="execution" data-trade-id="new">
+                            <div class="existing-screenshots mb-3" id="execution-screenshots-preview">
+                                <!-- Prévisualisation des nouvelles images -->
+                            </div>
+                            {{ form_widget(form.executionScreenshots, {'attr': {'class': 'form-control screenshot-upload'}}) }}
+                            <small class="form-text text-muted">Vous pourrez réorganiser les images après la création du trade.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Screenshots Management</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="screenshot-manager" data-category="management" data-trade-id="new">
+                            <div class="existing-screenshots mb-3" id="management-screenshots-preview">
+                                <!-- Prévisualisation des nouvelles images -->
+                            </div>
+                            {{ form_widget(form.managementScreenshots, {'attr': {'class': 'form-control screenshot-upload'}}) }}
+                            <small class="form-text text-muted">Vous pourrez réorganiser les images après la création du trade.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Screenshots Closing</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="screenshot-manager" data-category="closing" data-trade-id="new">
+                            <div class="existing-screenshots mb-3" id="closing-screenshots-preview">
+                                <!-- Prévisualisation des nouvelles images -->
+                            </div>
+                            {{ form_widget(form.closingScreenshots, {'attr': {'class': 'form-control screenshot-upload'}}) }}
+                            <small class="form-text text-muted">Vous pourrez réorganiser les images après la création du trade.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-check-circle"></i> {{ button_label|default('Créer le trade') }}
+            </button>
+            <a href="{{ path('app_trade_index') }}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-x-circle"></i> Annuler
+            </a>
+        </div>
+
+        {{ form_end(form) }}
     </div>
+
+    <style>
+        .screenshot-manager {
+            position: relative;
+        }
+        .existing-screenshots {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 50px;
+        }
+        .screenshot-item {
+            position: relative;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .delete-screenshot {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            padding: 0;
+        }
+        .badge.bg-info {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+        }
+    </style>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gestion de la prévisualisation des images pour la création
+            document.querySelectorAll('.screenshot-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const category = this.id.replace('trade_type_form_', '').replace('Screenshots', '').toLowerCase();
+                    const container = document.getElementById(category + '-screenshots-preview');
+
+                    // Vider la prévisualisation existante
+                    container.innerHTML = '';
+
+                    Array.from(this.files).forEach((file, index) => {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const screenshotItem = document.createElement('div');
+                            screenshotItem.className = 'screenshot-item new';
+                            screenshotItem.dataset.index = index;
+                            screenshotItem.innerHTML = `
+                                <img src="${e.target.result}" class="img-thumbnail" style="max-height: 100px;">
+                                <button type="button" class="btn btn-danger btn-sm delete-preview-screenshot">×</button>
+                                <span class="badge bg-info">Nouveau</span>
+                            `;
+                            container.appendChild(screenshotItem);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                });
+            });
+
+            // Gestion de la suppression des images en prévisualisation (avant création)
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-preview-screenshot')) {
+                    const screenshotItem = e.target.closest('.screenshot-item');
+                    const input = screenshotItem.closest('.screenshot-manager').querySelector('.screenshot-upload');
+                    const index = parseInt(screenshotItem.dataset.index);
+
+                    // Créer une nouvelle FileList sans le fichier supprimé
+                    const newFiles = Array.from(input.files).filter((_, i) => i !== index);
+
+                    // Mettre à jour l'input file (nécessite une recréation car FileList est en lecture seule)
+                    const newFileList = new DataTransfer();
+                    newFiles.forEach(file => newFileList.items.add(file));
+                    input.files = newFileList.files;
+
+                    // Supprimer l'élément de prévisualisation
+                    screenshotItem.remove();
+
+                    // Déclencher l'événement change pour mettre à jour l'affichage
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+
+            // Désactiver Sortable pour la création (car le trade n'existe pas encore)
+            // Le réordonnancement sera disponible après la création
+        });
+    </script>
 {% endblock %}

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Trade;
+use App\Entity\TradeScreenshot;
 use App\Form\TradeTypeForm;
 use App\Repository\TradeRepository;
 use App\Service\FileUploader;
@@ -60,11 +61,36 @@ class TradeController extends AbstractController
         ]);
     }
 
+
     #[Route('/{id}', name: 'app_trade_show', methods: ['GET'])]
     public function show(Trade $trade): Response
     {
+        // Vérifiez que l'utilisateur peut voir ce trade
+        if ($trade->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException('Vous n\'avez pas accès à ce trade.');
+        }
+
+        // Récupérez les screenshots organisés par catégorie
+        $screenshotsByCategory = [
+            'execution' => [],
+            'management' => [],
+            'closing' => []
+        ];
+
+        foreach ($trade->getScreenshots() as $screenshot) {
+            $screenshotsByCategory[$screenshot->getCategory()][] = $screenshot;
+        }
+
+        // Triez chaque catégorie par position
+        foreach ($screenshotsByCategory as $category => $screenshots) {
+            usort($screenshotsByCategory[$category], function($a, $b) {
+                return $a->getPosition() <=> $b->getPosition();
+            });
+        }
+
         return $this->render('trade/show.html.twig', [
             'trade' => $trade,
+            'screenshotsByCategory' => $screenshotsByCategory
         ]);
     }
 
@@ -96,13 +122,60 @@ class TradeController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_trade_delete', methods: ['POST'])]
-    public function delete(Request $request, Trade $trade, EntityManagerInterface $entityManager): Response
+    // Ajoutez ces nouvelles méthodes pour l'API :
+    #[Route('/{id}/screenshots/reorder', name: 'app_trade_reorder_screenshots', methods: ['POST'])]
+    public function reorderScreenshots(Request $request, Trade $trade, EntityManagerInterface $entityManager): \Symfony\Component\HttpFoundation\JsonResponse
     {
-        if ($this->isCsrfTokenValid('delete'.$trade->getId(), $request->request->get('_token'))) {
+        $data = json_decode($request->getContent(), true);
+
+        foreach ($data['order'] as $position => $screenshotId) {
+            $screenshot = $entityManager->getRepository(TradeScreenshot::class)->find($screenshotId);
+            if ($screenshot && $screenshot->getTrade() === $trade) {
+                $screenshot->setPosition($position);
+            }
+        }
+
+        $entityManager->flush();
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/screenshot/{id}/delete', name: 'app_trade_delete_screenshot', methods: ['DELETE'])]
+    public function deleteScreenshot(TradeScreenshot $screenshot, EntityManagerInterface $entityManager, FileUploader $fileUploader): \Symfony\Component\HttpFoundation\JsonResponse
+    {
+        if ($screenshot->getTrade()->getUser() !== $this->getUser()) {
+            return $this->json(['success' => false, 'error' => 'Unauthorized'], 403);
+        }
+
+        // Supprimer le fichier physique
+        $fileUploader->remove($screenshot->getFilename());
+
+        // Supprimer l'entité
+        $entityManager->remove($screenshot);
+        $entityManager->flush();
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/{id}', name: 'app_trade_delete', methods: ['POST'])]
+    public function delete(Request $request, Trade $trade, EntityManagerInterface $entityManager, FileUploader $fileUploader): Response
+    {
+        if ($this->isCsrfTokenValid('delete' . $trade->getId(), $request->request->get('_token'))) {
+            // Vérifier que l'utilisateur peut supprimer ce trade
+            if ($trade->getUser() !== $this->getUser()) {
+                throw $this->createAccessDeniedException('Vous n\'avez pas le droit de supprimer ce trade.');
+            }
+
+            // Supprimer tous les fichiers screenshots associés
+            foreach ($trade->getScreenshots() as $screenshot) {
+                $fileUploader->remove($screenshot->getFilename());
+            }
+
+            // Supprimer le trade de la base de données
             $entityManager->remove($trade);
             $entityManager->flush();
-            $this->addFlash('success', 'Trade supprimé avec succès!');
+
+            $this->addFlash('success', 'Trade et ses screenshots supprimés avec succès!');
         }
 
         return $this->redirectToRoute('app_trade_index', [], Response::HTTP_SEE_OTHER);
@@ -111,14 +184,13 @@ class TradeController extends AbstractController
     private function handleFileUploads($form, $trade, $fileUploader): void
     {
         $screenshotTypes = [
-            'executionScreenshots' => 'executionScreenshots',
-            'managementScreenshots' => 'managementScreenshots',
-            'closingScreenshots' => 'closingScreenshots'
+            'executionScreenshots' => 'execution',
+            'managementScreenshots' => 'management',
+            'closingScreenshots' => 'closing'
         ];
 
-        foreach ($screenshotTypes as $formField => $property) {
+        foreach ($screenshotTypes as $formField => $category) {
             $files = $form->get($formField)->getData();
-            $filenames = [];
 
             if ($files) {
                 foreach ($files as $file) {
@@ -126,14 +198,17 @@ class TradeController extends AbstractController
                         $filename = $fileUploader->upload($file);
                         $fileUploader->compressImage(
                             $fileUploader->getTargetDirectory() . '/' . $filename,
-                          30
+                            0
                         );
-                        $filenames[] = $filename;
+
+                        $screenshot = new TradeScreenshot();
+                        $screenshot->setFilename($filename);
+                        $screenshot->setCategory($category);
+                        $screenshot->setPosition(count($trade->getScreenshotsByCategory($category)));
+
+                        $trade->addScreenshot($screenshot);
                     }
                 }
-
-                $setter = 'set' . ucfirst($property);
-                $trade->$setter($filenames);
             }
         }
     }
