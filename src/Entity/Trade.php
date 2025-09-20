@@ -102,11 +102,15 @@ class Trade
     private ?User $user = null;
 
 
+    #[ORM\OneToMany(targetEntity: TradeScreenshot::class, mappedBy: 'trade', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $screenshots;
+
     public function __construct()
     {
         $this->timeframes = new ArrayCollection();
         $this->confluences = new ArrayCollection();
         $this->setups = new ArrayCollection();
+        $this->screenshots = new ArrayCollection();
         $this->watchlistDate = new \DateTime();
     }
 
@@ -494,5 +498,40 @@ class Trade
     {
         $this->user = $user;
         return $this;
+    }
+
+    /**
+     * @return Collection<int, TradeScreenshot>
+     */
+    public function getScreenshots(): Collection
+    {
+        return $this->screenshots;
+    }
+
+    public function addScreenshot(TradeScreenshot $screenshot): self
+    {
+        if (!$this->screenshots->contains($screenshot)) {
+            $this->screenshots->add($screenshot);
+            $screenshot->setTrade($this);
+        }
+        return $this;
+    }
+
+    public function removeScreenshot(TradeScreenshot $screenshot): self
+    {
+        if ($this->screenshots->removeElement($screenshot)) {
+            // set the owning side to null (unless already changed)
+            if ($screenshot->getTrade() === $this) {
+                $screenshot->setTrade(null);
+            }
+        }
+        return $this;
+    }
+
+    public function getScreenshotsByCategory(string $category): array
+    {
+        return $this->screenshots->filter(function(TradeScreenshot $screenshot) use ($category) {
+            return $screenshot->getCategory() === $category;
+        })->toArray();
     }
 }

@@ -62,4 +62,12 @@ class FileUploader
             imagedestroy($image);
         }
     }
+
+    public function remove(string $filename): void
+    {
+        $filePath = $this->getTargetDirectory().'/'.$filename;
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+    }
 }

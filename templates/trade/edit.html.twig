@@ -3,88 +3,343 @@
 {% block title %}Modifier Trade{% endblock %}
 
 {% block body %}
-    <h1>Modifier le Trade</h1>
+    <div class="container-fluid py-4">
+        <h1 class="mb-4">Modifier le Trade</h1>
 
-    {{ form_start(form) }}
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">Informations de base</div>
-                <div class="card-body">
-                    {{ form_row(form.asset) }}
-                    {{ form_row(form.watchlistDate) }}
-                    {{ form_row(form.entryDate) }}
-                    {{ form_row(form.exitDate) }}
-                    {{ form_row(form.orderType) }}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">Gestion du risque</div>
-                <div class="card-body">
-                    {{ form_row(form.riskPercentage) }}
-                    {{ form_row(form.maxRiskEuro) }}
-                    {{ form_row(form.initialRR) }}
-                    {{ form_row(form.finalRR) }}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header">Analyse</div>
-                <div class="card-body">
-                    {{ form_row(form.timeframes) }}
-                    {{ form_row(form.tradeType) }}
-                    {{ form_row(form.trend) }}
-                    {{ form_row(form.confluences) }}
-                    {{ form_row(form.setups) }}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header">Résultat</div>
-                <div class="card-body">
-                    {{ form_row(form.result) }}
-                    {{ form_row(form.tradeManagement) }}
-                    {{ form_row(form.error) }}
-                    {{ form_row(form.goodTrade) }}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="bi bi-card-checklist"></i> Détails supplémentaires
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            {{ form_row(form.executionReason) }}
-                            {{ form_row(form.noteErrors) }}
+        {{ form_start(form) }}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Informations de base</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form_label(form.asset, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.asset, {'attr': {'class': 'form-control'}}) }}
                         </div>
-                        <div class="col-md-6">
-                            {{ form_row(form.executionScreenshots) }}
-                            {{ form_row(form.managementScreenshots) }}
-                            {{ form_row(form.closingScreenshots) }}
+                        <div class="mb-3">
+                            {{ form_label(form.watchlistDate, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.watchlistDate, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.entryDate, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.entryDate, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.exitDate, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.exitDate, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.orderType, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.orderType, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Gestion du risque</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form_label(form.riskPercentage, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.riskPercentage, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.maxRiskEuro, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.maxRiskEuro, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.initialRR, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.initialRR, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.finalRR, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.finalRR, {'attr': {'class': 'form-control'}}) }}
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Analyse</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form_label(form.timeframes, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.timeframes, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.tradeType, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.tradeType, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.trend, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.trend, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.confluences, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            <div class="checkbox-group">
+                                {% for confluence in form.confluences %}
+                                    <div class="form-check mb-2">
+                                        {{ form_widget(confluence, {'attr': {'class': 'form-check-input'}}) }}
+                                        {{ form_label(confluence, null, {'label_attr': {'class': 'form-check-label'}}) }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.setups, null, {'label_attr': {'class': 'form-label fw-bold mb-2 d-block'}}) }}
+                            <div class="checkbox-group">
+                                {% for setup in form.setups %}
+                                    <div class="form-check mb-2">
+                                        {{ form_widget(setup, {'attr': {'class': 'form-check-input'}}) }}
+                                        {{ form_label(setup, null, {'label_attr': {'class': 'form-check-label'}}) }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Résultat</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            {{ form_label(form.result, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.result, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form_widget(form.tradeManagement, {'attr': {'class': 'form-check-input'}}) }}
+                                {{ form_label(form.tradeManagement, null, {'label_attr': {'class': 'form-check-label fw-bold'}}) }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form_label(form.error, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.error, {'attr': {'class': 'form-control'}}) }}
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form_widget(form.goodTrade, {'attr': {'class': 'form-check-input'}}) }}
+                                {{ form_label(form.goodTrade, null, {'label_attr': {'class': 'form-check-label fw-bold'}}) }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="bi bi-card-checklist"></i> Détails supplémentaires</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form_label(form.executionReason, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                                    {{ form_widget(form.executionReason, {'attr': {'class': 'form-control', 'rows': 4}}) }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form_label(form.noteErrors, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                                    {{ form_widget(form.noteErrors, {'attr': {'class': 'form-control', 'rows': 4}}) }}
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Screenshots d'exécution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="screenshot-manager" data-category="execution" data-trade-id="{{ trade.id }}">
+                            <div class="existing-screenshots mb-3">
+                                {% for screenshot in trade.getScreenshotsByCategory('execution')|sort((a, b) => a.position <=> b.position) %}
+                                    <div class="screenshot-item" data-id="{{ screenshot.id }}">
+                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}" class="img-thumbnail" style="max-height: 100px;">
+                                        <button type="button" class="btn btn-danger btn-sm delete-screenshot">×</button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {{ form_widget(form.executionScreenshots, {'attr': {'class': 'form-control screenshot-upload'}}) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Screenshots Management</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="screenshot-manager" data-category="management" data-trade-id="{{ trade.id }}">
+                            <div class="existing-screenshots mb-3">
+                                {% for screenshot in trade.getScreenshotsByCategory('management')|sort((a, b) => a.position <=> b.position) %}
+                                    <div class="screenshot-item" data-id="{{ screenshot.id }}">
+                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}" class="img-thumbnail" style="max-height: 100px;">
+                                        <button type="button" class="btn btn-danger btn-sm delete-screenshot">×</button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {{ form_widget(form.managementScreenshots, {'attr': {'class': 'form-control screenshot-upload'}}) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Répétez pour management et closing #}
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">Screenshots Closing</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="screenshot-manager" data-category="closing" data-trade-id="{{ trade.id }}">
+                            <div class="existing-screenshots mb-3">
+                                {% for screenshot in trade.getScreenshotsByCategory('closing')|sort((a, b) => a.position <=> b.position) %}
+                                    <div class="screenshot-item" data-id="{{ screenshot.id }}">
+                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}" class="img-thumbnail" style="max-height: 100px;">
+                                        <button type="button" class="btn btn-danger btn-sm delete-screenshot">×</button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {{ form_widget(form.closingScreenshots, {'attr': {'class': 'form-control screenshot-upload'}}) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Répétez pour management et closing #}
+        </div>
+
+        <div class="d-flex gap-2 mb-4">
+            <button class="btn btn-primary">{{ button_label|default('Modifier') }}</button>
+            <a href="{{ path('app_trade_index') }}" class="btn btn-secondary">Retour à la liste</a>
+        </div>
+
+        {{ form_end(form) }}
     </div>
 
-    <button class="btn btn-primary">{{ button_label|default('Modifier') }}</button>
-    <a href="{{ path('app_trade_index') }}" class="btn btn-secondary">Retour à la liste</a>
+    <style>
+        .screenshot-manager {
+            position: relative;
+        }
+        .existing-screenshots {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .screenshot-item {
+            position: relative;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .delete-screenshot {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            padding: 0;
+        }
+    </style>
+{% endblock %}
 
-    {{ form_end(form) }}
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialiser Sortable pour chaque catégorie
+            document.querySelectorAll('.existing-screenshots').forEach(container => {
+                new Sortable(container, {
+                    animation: 150,
+                    onEnd: function(evt) {
+                        const category = evt.from.closest('.screenshot-manager').dataset.category;
+                        const tradeId = evt.from.closest('.screenshot-manager').dataset.tradeId;
+                        const order = Array.from(evt.from.children).map(item => item.dataset.id);
+
+                        fetch('/trade/' + tradeId + '/screenshots/reorder', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                category: category,
+                                order: order
+                            })
+                        });
+                    }
+                });
+            });
+
+            // Gestion de la suppression
+            document.querySelectorAll('.delete-screenshot').forEach(button => {
+                button.addEventListener('click', function() {
+                    const screenshotId = this.closest('.screenshot-item').dataset.id;
+                    if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
+                        fetch('/trade/screenshot/' + screenshotId + '/delete', {
+                            method: 'DELETE',
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    this.closest('.screenshot-item').remove();
+                                }
+                            });
+                    }
+                });
+            });
+
+            // Prévisualisation des nouvelles images
+            document.querySelectorAll('.screenshot-upload').forEach(input => {
+                input.addEventListener('change', function(e) {
+                    const container = this.closest('.screenshot-manager').querySelector('.existing-screenshots');
+                    Array.from(this.files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const img = document.createElement('div');
+                            img.className = 'screenshot-item new';
+                            img.innerHTML = `
+                                <img src="${e.target.result}" class="img-thumbnail" style="max-height: 100px;">
+                                <span class="badge bg-info">Nouveau</span>
+                            `;
+                            container.appendChild(img);
+                        }
+                        reader.readAsDataURL(file);
+                    });
+                });
+            });
+        });
+    </script>
 {% endblock %}
