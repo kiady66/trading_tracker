@@ -189,17 +189,23 @@ class TradeController extends AbstractController
             'closingScreenshots' => 'closing'
         ];
 
+        $user = $this->getUser();
+        $maxFileSizeKB = 20; // 10KB pour les utilisateurs de base
+        $compressionQuality = 10; // Qualité de base
+
+        if ($user->isPremium()) {
+             $maxFileSizeKB = 500; // 500KB pour les premium
+            $compressionQuality = 90; // Meilleure qualité
+        }
+
         foreach ($screenshotTypes as $formField => $category) {
             $files = $form->get($formField)->getData();
 
             if ($files) {
                 foreach ($files as $file) {
                     if ($file instanceof UploadedFile) {
-                        $filename = $fileUploader->upload($file);
-                        $fileUploader->compressImage(
-                            $fileUploader->getTargetDirectory() . '/' . $filename,
-                            0
-                        );
+                        // Upload avec compression adaptée
+                        $filename = $fileUploader->upload($file, $maxFileSizeKB, $compressionQuality);
 
                         $screenshot = new TradeScreenshot();
                         $screenshot->setFilename($filename);
