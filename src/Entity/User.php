@@ -141,4 +141,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->plainPassword = $plainPassword;
         return $this;
     }
+
+    public function isPremium(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    public function isAdmin(): bool
+    {
+        return in_array(self::ROLE_ADMIN, $this->getRoles());
+    }
 }
