@@ -114,6 +114,18 @@ class TradeRepository extends ServiceEntityRepository
         $gainRR = [];
         $cumulative = 0;
 
+        // Ajouter un point de départ à 0
+        if (count($trades) > 0) {
+            $firstTrade = $trades[0];
+            $firstDate = $firstTrade->getExitDate()->modify('-1 day')->format('Y-m-d');
+
+            $dates[] = $firstDate;
+            $gainsEuro[] = 0;
+            $cumulativeGains[] = 0;
+            $finalRR[] = 0;
+            $gainRR[] = 0;
+        }
+
         foreach ($trades as $trade) {
             $date = $trade->getExitDate()->format('Y-m-d');
             $gainEuro = $trade->getGainEuro() ?? 0;
