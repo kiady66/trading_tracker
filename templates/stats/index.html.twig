@@ -78,67 +78,62 @@
             </div>
 
             <!-- Stats Summary -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card stats-card">
-                        <div class="card-body text-center">
-                            <h6 class="text-muted">Win Rate</h6>
-                            <div class="stats-number text-{{ stats.win_rate >= 50 ? 'success' : 'danger' }}">
-                                {{ stats.win_rate|default(0)|number_format(1) }}%
+            <div class="d-flex flex-wrap gap-3 mb-4"> <!-- Supprimer la height fixe -->
+                <div class="card stats-card flex-fill" style="min-width: 200px; max-width: calc(25% - 12px);">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h6 class="text-muted">Win Rate</h6>
+                        <div class="stats-number text-{{ stats.win_rate >= 50 ? 'success' : 'danger' }}">
+                            {{ stats.win_rate|default(0)|number_format(1) }}%
+                        </div>
+                        <small class="text-muted">{{ stats.winning_trades }}W / {{ stats.losing_trades }}L</small>
+                    </div>
+                </div>
+
+                <div class="card stats-card flex-fill" style="min-width: 200px; max-width: calc(25% - 12px);">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h6 class="text-muted">Gain total</h6>
+                        <div class="d-flex justify-content-between align-items-center blurrable" id="totalGainEuro">
+                            <div style="flex: 1"></div>
+                            <div style="flex: 10" class="stats-number text-{{ stats.total_gain_euro >= 0 ? 'success' : 'danger' }}">
+                                {{ stats.total_gain_euro|default(0)|number_format(2) }} €
                             </div>
-                            <small class="text-muted">{{ stats.winning_trades }}W / {{ stats.losing_trades }}L</small>
+                            <i class="fas fa-eye clickable" onclick="toggleBlur('totalGainEuro')"
+                               style="cursor: pointer; font-size: 1.2rem; flex: 1"></i>
+                        </div>
+                        <p class="card-text text-muted mb-0">
+                            Gain total R: {{ stats.total_gain_rr|number_format(2) }} R
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card stats-card flex-fill" style="min-width: 200px; max-width: calc(25% - 12px);">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h6 class="text-muted">Gain RR Moyen</h6>
+                        <div class="stats-number text-{{ stats.avg_gain_rr >= 0 ? 'success' : 'danger' }}">
+                            {{ stats.avg_gain_rr|default(0)|number_format(2) }}
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h6 class="text-muted">Gain total</h6>
-                            <div class="d-flex justify-content-between align-items-center blurrable" id="totalGainEuro">
-                                <div class="stats-number text-{{ stats.total_gain_euro >= 0 ? 'success' : 'danger' }}">
-                                    {{ stats.total_gain_euro|default(0)|number_format(2) }} €
-                                </div>
-                                <i class="fas fa-eye clickable" onclick="toggleBlur('totalGainEuro')"
-                                   style="cursor: pointer; font-size: 1.2rem;"></i>
-                            </div>
-                            <p class="card-text text-muted">
-                                Gain total R: {{ stats.total_gain_rr|number_format(2) }} R
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card stats-card">
-                        <div class="card-body text-center">
-                            <h6 class="text-muted">Gain RR Moyen</h6>
-                            <div class="stats-number text-{{ stats.avg_gain_rr >= 0 ? 'success' : 'danger' }}">
-                                {{ stats.avg_gain_rr|default(0)|number_format(2) }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card stats-card">
-                        <div class="card-body text-center">
-                            <h6 class="text-muted">Total Trades</h6>
-                            <div class="stats-number text-primary">
-                                {{ stats.total_trades }}
-                            </div>
+
+                <div class="card stats-card flex-fill" style="min-width: 200px; max-width: calc(25% - 12px);">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h6 class="text-muted">Total Trades</h6>
+                        <div class="stats-number text-primary">
+                            {{ stats.total_trades }}
                         </div>
                     </div>
                 </div>
             </div>
-
             <!-- Graphiques -->
             <div class="row mb-4">
-                <!-- Win Rate Pie Chart -->
+                <!-- Gains Line Chart -->
                 <div class="col-md-6">
                     <div class="card mb-4">
                         <div class="card-header">
-                            <i class="bi bi-pie-chart"></i> Win Rate
+                            <i class="bi bi-graph-up"></i> Évolution des Gains (€)
                         </div>
                         <div class="card-body">
-                            <canvas id="winRateChart" height="250"></canvas>
+                            <canvas id="gainsChart" height="250"></canvas>
                         </div>
                     </div>
                 </div>
@@ -169,17 +164,19 @@
                     </div>
                 </div>
 
-                <!-- Gains Line Chart -->
+                <!-- Win Rate Pie Chart -->
                 <div class="col-md-6">
                     <div class="card mb-4">
                         <div class="card-header">
-                            <i class="bi bi-graph-up"></i> Évolution des Gains (€)
+                            <i class="bi bi-pie-chart"></i> Win Rate
                         </div>
                         <div class="card-body">
-                            <canvas id="gainsChart" height="250"></canvas>
+                            <canvas id="winRateChart" height="250"></canvas>
                         </div>
                     </div>
                 </div>
+
+
             </div>
 
             <!-- Tableau des stats détaillées -->
