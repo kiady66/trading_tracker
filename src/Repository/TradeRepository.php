@@ -51,7 +51,7 @@ class TradeRepository extends ServiceEntityRepository
 
         foreach ($trades as $trade) {
             $gainEuro = $trade->getGainEuro() ?? 0;
-            $finalRR = $trade->getFinalRR() ?? 0;
+            $finalRR = $trade->getGainRR() ?? 0;
 
             $stats['total_gain_euro'] += $gainEuro;
             $stats['total_gain_rr'] += $finalRR;

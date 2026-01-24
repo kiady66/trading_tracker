@@ -7,10 +7,10 @@ namespace DoctrineMigrations;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/**
+    /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20250903121314 extends AbstractMigration
+final class Version20260124213656 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -24,11 +24,12 @@ final class Version20250903121314 extends AbstractMigration
         $this->addSql('CREATE TABLE result (id SERIAL NOT NULL, name VARCHAR(100) NOT NULL, PRIMARY KEY(id))');
         $this->addSql('CREATE TABLE setup (id SERIAL NOT NULL, name VARCHAR(100) NOT NULL, PRIMARY KEY(id))');
         $this->addSql('CREATE TABLE timeframe (id SERIAL NOT NULL, name VARCHAR(50) NOT NULL, PRIMARY KEY(id))');
-        $this->addSql('CREATE TABLE trade (id SERIAL NOT NULL, result_id INT DEFAULT NULL, trade_type_id INT DEFAULT NULL, trend_id INT DEFAULT NULL, error_id INT DEFAULT NULL, asset VARCHAR(100) NOT NULL, entry_date TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, exit_date TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, watchlist_date TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, order_type VARCHAR(20) NOT NULL, risk_percentage DOUBLE PRECISION NOT NULL, initial_rr DOUBLE PRECISION DEFAULT NULL, final_rr DOUBLE PRECISION DEFAULT NULL, gain_rr DOUBLE PRECISION DEFAULT NULL, gain_euro DOUBLE PRECISION DEFAULT NULL, max_risk_euro DOUBLE PRECISION NOT NULL, day VARCHAR(20) DEFAULT NULL, trade_management BOOLEAN NOT NULL, good_trade BOOLEAN DEFAULT NULL, status VARCHAR(20) NOT NULL, PRIMARY KEY(id))');
+        $this->addSql('CREATE TABLE trade (id SERIAL NOT NULL, result_id INT DEFAULT NULL, trade_type_id INT DEFAULT NULL, trend_id INT DEFAULT NULL, error_id INT DEFAULT NULL, user_id INT NOT NULL, asset VARCHAR(100) NOT NULL, entry_date TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, exit_date TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, watchlist_date TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, order_type VARCHAR(20) NOT NULL, risk_percentage DOUBLE PRECISION NOT NULL, initial_rr DOUBLE PRECISION DEFAULT NULL, final_rr DOUBLE PRECISION DEFAULT NULL, gain_rr DOUBLE PRECISION DEFAULT NULL, gain_euro DOUBLE PRECISION DEFAULT NULL, max_risk_euro DOUBLE PRECISION NOT NULL, day VARCHAR(20) DEFAULT NULL, trade_management BOOLEAN NOT NULL, good_trade BOOLEAN DEFAULT NULL, status VARCHAR(20) NOT NULL, execution_reason TEXT DEFAULT NULL, note_errors TEXT DEFAULT NULL, execution_screenshots JSON DEFAULT NULL, management_screenshots JSON DEFAULT NULL, closing_screenshots JSON DEFAULT NULL, PRIMARY KEY(id))');
         $this->addSql('CREATE INDEX IDX_7E1A43667A7B643 ON trade (result_id)');
         $this->addSql('CREATE INDEX IDX_7E1A436636CCD465 ON trade (trade_type_id)');
         $this->addSql('CREATE INDEX IDX_7E1A436665B0AAB2 ON trade (trend_id)');
         $this->addSql('CREATE INDEX IDX_7E1A4366836088D7 ON trade (error_id)');
+        $this->addSql('CREATE INDEX IDX_7E1A4366A76ED395 ON trade (user_id)');
         $this->addSql('CREATE TABLE trade_timeframe (trade_id INT NOT NULL, timeframe_id INT NOT NULL, PRIMARY KEY(trade_id, timeframe_id))');
         $this->addSql('CREATE INDEX IDX_62362986C2D9760 ON trade_timeframe (trade_id)');
         $this->addSql('CREATE INDEX IDX_623629861F6C835C ON trade_timeframe (timeframe_id)');
@@ -39,8 +40,14 @@ final class Version20250903121314 extends AbstractMigration
         $this->addSql('CREATE INDEX IDX_F1086D3C2D9760 ON trade_setup (trade_id)');
         $this->addSql('CREATE INDEX IDX_F1086D3CDCDB68E ON trade_setup (setup_id)');
         $this->addSql('CREATE TABLE trade_error (id SERIAL NOT NULL, name VARCHAR(100) NOT NULL, PRIMARY KEY(id))');
+        $this->addSql('CREATE TABLE trade_screenshot (id SERIAL NOT NULL, trade_id INT NOT NULL, filename VARCHAR(255) NOT NULL, category VARCHAR(20) NOT NULL, position INT NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, PRIMARY KEY(id))');
+        $this->addSql('CREATE INDEX IDX_760A45ACC2D9760 ON trade_screenshot (trade_id)');
+        $this->addSql('COMMENT ON COLUMN trade_screenshot.created_at IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('CREATE TABLE trade_type (id SERIAL NOT NULL, name VARCHAR(100) NOT NULL, PRIMARY KEY(id))');
         $this->addSql('CREATE TABLE trend (id SERIAL NOT NULL, name VARCHAR(100) NOT NULL, PRIMARY KEY(id))');
+        $this->addSql('CREATE TABLE "user" (id SERIAL NOT NULL, email VARCHAR(180) NOT NULL, roles JSON NOT NULL, password VARCHAR(255) NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, PRIMARY KEY(id))');
+        $this->addSql('CREATE UNIQUE INDEX UNIQ_8D93D649E7927C74 ON "user" (email)');
+        $this->addSql('COMMENT ON COLUMN "user".created_at IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('CREATE TABLE messenger_messages (id BIGSERIAL NOT NULL, body TEXT NOT NULL, headers TEXT NOT NULL, queue_name VARCHAR(190) NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, available_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, delivered_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, PRIMARY KEY(id))');
         $this->addSql('CREATE INDEX IDX_75EA56E0FB7336F0 ON messenger_messages (queue_name)');
         $this->addSql('CREATE INDEX IDX_75EA56E0E3BD61CE ON messenger_messages (available_at)');
@@ -60,12 +67,14 @@ final class Version20250903121314 extends AbstractMigration
         $this->addSql('ALTER TABLE trade ADD CONSTRAINT FK_7E1A436636CCD465 FOREIGN KEY (trade_type_id) REFERENCES trade_type (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE trade ADD CONSTRAINT FK_7E1A436665B0AAB2 FOREIGN KEY (trend_id) REFERENCES trend (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE trade ADD CONSTRAINT FK_7E1A4366836088D7 FOREIGN KEY (error_id) REFERENCES trade_error (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
+        $this->addSql('ALTER TABLE trade ADD CONSTRAINT FK_7E1A4366A76ED395 FOREIGN KEY (user_id) REFERENCES "user" (id) NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE trade_timeframe ADD CONSTRAINT FK_62362986C2D9760 FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE trade_timeframe ADD CONSTRAINT FK_623629861F6C835C FOREIGN KEY (timeframe_id) REFERENCES timeframe (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE trade_confluence ADD CONSTRAINT FK_2AA9E5FDC2D9760 FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE trade_confluence ADD CONSTRAINT FK_2AA9E5FDC62D3CC0 FOREIGN KEY (confluence_id) REFERENCES confluence (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE trade_setup ADD CONSTRAINT FK_F1086D3C2D9760 FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
         $this->addSql('ALTER TABLE trade_setup ADD CONSTRAINT FK_F1086D3CDCDB68E FOREIGN KEY (setup_id) REFERENCES setup (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
+        $this->addSql('ALTER TABLE trade_screenshot ADD CONSTRAINT FK_760A45ACC2D9760 FOREIGN KEY (trade_id) REFERENCES trade (id) ON DELETE CASCADE NOT DEFERRABLE INITIALLY IMMEDIATE');
     }
 
     public function down(Schema $schema): void
@@ -76,12 +85,14 @@ final class Version20250903121314 extends AbstractMigration
         $this->addSql('ALTER TABLE trade DROP CONSTRAINT FK_7E1A436636CCD465');
         $this->addSql('ALTER TABLE trade DROP CONSTRAINT FK_7E1A436665B0AAB2');
         $this->addSql('ALTER TABLE trade DROP CONSTRAINT FK_7E1A4366836088D7');
+        $this->addSql('ALTER TABLE trade DROP CONSTRAINT FK_7E1A4366A76ED395');
         $this->addSql('ALTER TABLE trade_timeframe DROP CONSTRAINT FK_62362986C2D9760');
         $this->addSql('ALTER TABLE trade_timeframe DROP CONSTRAINT FK_623629861F6C835C');
         $this->addSql('ALTER TABLE trade_confluence DROP CONSTRAINT FK_2AA9E5FDC2D9760');
         $this->addSql('ALTER TABLE trade_confluence DROP CONSTRAINT FK_2AA9E5FDC62D3CC0');
         $this->addSql('ALTER TABLE trade_setup DROP CONSTRAINT FK_F1086D3C2D9760');
         $this->addSql('ALTER TABLE trade_setup DROP CONSTRAINT FK_F1086D3CDCDB68E');
+        $this->addSql('ALTER TABLE trade_screenshot DROP CONSTRAINT FK_760A45ACC2D9760');
         $this->addSql('DROP TABLE confluence');
         $this->addSql('DROP TABLE result');
         $this->addSql('DROP TABLE setup');
@@ -91,8 +102,10 @@ final class Version20250903121314 extends AbstractMigration
         $this->addSql('DROP TABLE trade_confluence');
         $this->addSql('DROP TABLE trade_setup');
         $this->addSql('DROP TABLE trade_error');
+        $this->addSql('DROP TABLE trade_screenshot');
         $this->addSql('DROP TABLE trade_type');
         $this->addSql('DROP TABLE trend');
+        $this->addSql('DROP TABLE "user"');
         $this->addSql('DROP TABLE messenger_messages');
     }
 }
