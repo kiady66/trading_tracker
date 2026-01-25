@@ -33,7 +33,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     private ?string $plainPassword = null;
 
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Trade::class)]
+    #[ORM\OneToMany(targetEntity: Trade::class, mappedBy: 'user')]
     private Collection $trades;
 
     #[ORM\Column(type: 'datetime_immutable')]

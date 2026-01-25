@@ -21,13 +21,15 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use App\Entity\Trade as EntityTrade;
 
 class TradeTypeForm extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('asset', TextType::class, [
+            ->add('asset', ChoiceType::class, [
+                'choices' => array_combine(EntityTrade::ALLOWED_ASSETS, EntityTrade::ALLOWED_ASSETS),
                 'label' => 'Nom de l\'actif'
             ])
             ->add('entryDate', DateTimeType::class, [
