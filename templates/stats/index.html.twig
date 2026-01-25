@@ -232,7 +232,7 @@
                             </tr>
                             <tr>
                                 <td>Gain moyen par trade (€)</td>
-                                <td class="fw-bold text-{{ (stats.total_gain_euro / stats.total_trades) >= 0 ? 'success' : 'danger' }}">
+                                <td class="fw-bold text-{{ (stats.total_trades > 0 and (stats.total_gain_euro / stats.total_trades) >= 0) ? 'success' : 'danger' }}">
                                     {{ stats.total_trades > 0 ? (stats.total_gain_euro / stats.total_trades)|number_format(2) : 0 }} €
                                 </td>
                                 <td>Plus grosse perte (€)</td>
@@ -394,7 +394,7 @@
                                     const label = context.label || '';
                                     const value = context.raw || 0;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = Math.round((value / total) * 100);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
                                     return `${label}: ${value} (${percentage}%)`;
                                 }
                             }

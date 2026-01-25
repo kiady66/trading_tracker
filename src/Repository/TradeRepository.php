@@ -42,6 +42,7 @@ class TradeRepository extends ServiceEntityRepository
             'avg_gain_rr' => 0,
             'avg_win_rr' => 0,
             'avg_loss_rr' => 0,
+            'win_rate' => 0,
         ];
 
         $winningGains = [];
