@@ -50,6 +50,22 @@ class TradeTest extends TestCase
         $this->assertSame($asset, $this->trade->getAsset());
     }
 
+    public function testSetAssetWithInvalidAssetThrowsException(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid asset "INVALID/PAIR"');
+
+        $this->trade->setAsset('INVALID/PAIR');
+    }
+
+    public function testSetAssetWithAllAllowedAssets(): void
+    {
+        foreach (Trade::ALLOWED_ASSETS as $asset) {
+            $this->trade->setAsset($asset);
+            $this->assertSame($asset, $this->trade->getAsset());
+        }
+    }
+
     public function testSetAndGetOrderType(): void
     {
         $orderType = 'LIMIT';
