@@ -11,6 +11,38 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: TradeRepository::class)]
 class Trade
 {
+    public const ALLOWED_ASSETS = [
+        // Major Forex Pairs
+        'EUR/USD',
+        'GBP/USD',
+        'USD/JPY',
+        'USD/CHF',
+        'AUD/USD',
+        'USD/CAD',
+        'NZD/USD',
+        // Cross Pairs
+        'EUR/GBP',
+        'EUR/JPY',
+        'GBP/JPY',
+        'NZD/JPY',
+        'AUD/GBP',
+        'AUD/NZD',
+        'AUD/CAD',
+        'NZD/CAD',
+        'AUD/CHF',
+        'AUD/JPY',
+        'GBP/CAD',
+        'GBP/JPY',
+        'CAD/CHF',
+        'CAD/JPY',
+        'CHF/JPY',
+        // Crypto
+        'BTC/USD',
+        'ETH/USD',
+        // Commodities
+        'XAU/USD',
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -126,6 +158,13 @@ class Trade
 
     public function setAsset(string $asset): self
     {
+        if (!in_array($asset, self::ALLOWED_ASSETS, true)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Invalid asset "%s". Allowed assets are: %s',
+                $asset,
+                implode(', ', self::ALLOWED_ASSETS)
+            ));
+        }
         $this->asset = $asset;
         return $this;
     }

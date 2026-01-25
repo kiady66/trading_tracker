@@ -33,7 +33,6 @@ class TradeController extends AbstractController
     {
         $trade = new Trade();
 
-        // Ajoutez cette ligne pour assigner l'utilisateur connecté
         $trade->setUser($this->getUser());
 
         $form = $this->createForm(TradeTypeForm::class, $trade);
@@ -65,12 +64,10 @@ class TradeController extends AbstractController
     #[Route('/{id}', name: 'app_trade_show', methods: ['GET'])]
     public function show(Trade $trade): Response
     {
-        // Vérifiez que l'utilisateur peut voir ce trade
         if ($trade->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException('Vous n\'avez pas accès à ce trade.');
         }
 
-        // Récupérez les screenshots organisés par catégorie
         $screenshotsByCategory = [
             'execution' => [],
             'management' => [],
@@ -81,7 +78,6 @@ class TradeController extends AbstractController
             $screenshotsByCategory[$screenshot->getCategory()][] = $screenshot;
         }
 
-        // Triez chaque catégorie par position
         foreach ($screenshotsByCategory as $category => $screenshots) {
             usort($screenshotsByCategory[$category], function($a, $b) {
                 return $a->getPosition() <=> $b->getPosition();
@@ -122,7 +118,6 @@ class TradeController extends AbstractController
         ]);
     }
 
-    // Ajoutez ces nouvelles méthodes pour l'API :
     #[Route('/{id}/screenshots/reorder', name: 'app_trade_reorder_screenshots', methods: ['POST'])]
     public function reorderScreenshots(Request $request, Trade $trade, EntityManagerInterface $entityManager): \Symfony\Component\HttpFoundation\JsonResponse
     {
@@ -147,10 +142,8 @@ class TradeController extends AbstractController
             return $this->json(['success' => false, 'error' => 'Unauthorized'], 403);
         }
 
-        // Supprimer le fichier physique
         $fileUploader->remove($screenshot->getFilename());
 
-        // Supprimer l'entité
         $entityManager->remove($screenshot);
         $entityManager->flush();
 
@@ -161,17 +154,14 @@ class TradeController extends AbstractController
     public function delete(Request $request, Trade $trade, EntityManagerInterface $entityManager, FileUploader $fileUploader): Response
     {
         if ($this->isCsrfTokenValid('delete' . $trade->getId(), $request->request->get('_token'))) {
-            // Vérifier que l'utilisateur peut supprimer ce trade
             if ($trade->getUser() !== $this->getUser()) {
                 throw $this->createAccessDeniedException('Vous n\'avez pas le droit de supprimer ce trade.');
             }
 
-            // Supprimer tous les fichiers screenshots associés
             foreach ($trade->getScreenshots() as $screenshot) {
                 $fileUploader->remove($screenshot->getFilename());
             }
 
-            // Supprimer le trade de la base de données
             $entityManager->remove($trade);
             $entityManager->flush();
 
@@ -190,12 +180,12 @@ class TradeController extends AbstractController
         ];
 
         $user = $this->getUser();
-        $maxFileSizeKB = 20; // 10KB pour les utilisateurs de base
-        $compressionQuality = 10; // Qualité de base
+        $maxFileSizeKB = 20; //
+        $compressionQuality = 10;
 
         if ($user->isPremium()) {
-             $maxFileSizeKB = 500; // 500KB pour les premium
-            $compressionQuality = 90; // Meilleure qualité
+             $maxFileSizeKB = 500;
+            $compressionQuality = 90;
         }
 
         foreach ($screenshotTypes as $formField => $category) {
@@ -204,7 +194,6 @@ class TradeController extends AbstractController
             if ($files) {
                 foreach ($files as $file) {
                     if ($file instanceof UploadedFile) {
-                        // Upload avec compression adaptée
                         $filename = $fileUploader->upload($file, $maxFileSizeKB, $compressionQuality);
 
                         $screenshot = new TradeScreenshot();
