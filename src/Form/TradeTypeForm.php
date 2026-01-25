@@ -22,6 +22,7 @@ use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use App\Entity\Trade as EntityTrade;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class TradeTypeForm extends AbstractType
 {
@@ -30,7 +31,20 @@ class TradeTypeForm extends AbstractType
         $builder
             ->add('asset', ChoiceType::class, [
                 'choices' => array_combine(EntityTrade::ALLOWED_ASSETS, EntityTrade::ALLOWED_ASSETS),
-                'label' => 'Nom de l\'actif'
+                'label' => 'Nom de l\'actif',
+                'autocomplete' => true,
+                'tom_select_options' => [
+                    'create' => false,
+                    'maxOptions' => 50,
+                    'placeholder' => 'Tapez pour rechercher un actif...',
+                ],
+                'constraints' => [
+                    new Assert\NotBlank(),
+                    new Assert\Choice([
+                        'choices' => EntityTrade::ALLOWED_ASSETS,
+                        'message' => 'Veuillez choisir un actif valide.',
+                    ]),
+                ],
             ])
             ->add('entryDate', DateTimeType::class, [
                 'required' => false,
