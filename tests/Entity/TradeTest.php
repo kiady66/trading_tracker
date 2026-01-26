@@ -3,14 +3,12 @@
 namespace App\Tests\Entity;
 
 use App\Entity\Confluence;
-use App\Entity\Setup;
 use App\Entity\Timeframe;
 use App\Entity\Trade;
 use App\Entity\TradeError;
 use App\Entity\TradeScreenshot;
 use App\Entity\TradeType;
 use App\Entity\Trend;
-use App\Entity\Result;
 use App\Entity\User;
 use PHPUnit\Framework\TestCase;
 
@@ -27,7 +25,6 @@ class TradeTest extends TestCase
     {
         $this->assertCount(0, $this->trade->getTimeframes());
         $this->assertCount(0, $this->trade->getConfluences());
-        $this->assertCount(0, $this->trade->getSetups());
         $this->assertCount(0, $this->trade->getScreenshots());
     }
 
@@ -208,25 +205,6 @@ class TradeTest extends TestCase
         $this->assertCount(0, $this->trade->getConfluences());
     }
 
-    public function testAddSetup(): void
-    {
-        $setup = $this->createMock(Setup::class);
-        $result = $this->trade->addSetup($setup);
-
-        $this->assertSame($this->trade, $result);
-        $this->assertCount(1, $this->trade->getSetups());
-    }
-
-    public function testRemoveSetup(): void
-    {
-        $setup = $this->createMock(Setup::class);
-        $this->trade->addSetup($setup);
-        $result = $this->trade->removeSetup($setup);
-
-        $this->assertSame($this->trade, $result);
-        $this->assertCount(0, $this->trade->getSetups());
-    }
-
     public function testAddScreenshot(): void
     {
         $screenshot = $this->createMock(TradeScreenshot::class);
@@ -307,15 +285,6 @@ class TradeTest extends TestCase
 
         $this->assertSame($this->trade, $result);
         $this->assertSame($trend, $this->trade->getTrend());
-    }
-
-    public function testSetAndGetResult(): void
-    {
-        $result = $this->createMock(Result::class);
-        $returnValue = $this->trade->setResult($result);
-
-        $this->assertSame($this->trade, $returnValue);
-        $this->assertSame($result, $this->trade->getResult());
     }
 
     public function testSetAndGetError(): void

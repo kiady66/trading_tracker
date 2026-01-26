@@ -16,7 +16,7 @@
 
             <!-- Stats Cards -->
             <div class="row mb-4">
-                <div class="col-md-3">
+                <div class="col-md-6">
                     <div class="card stats-card">
                         <div class="card-body">
                             <h6 class="text-muted">Total Trades</h6>
@@ -24,27 +24,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-6">
                     <div class="card stats-card">
                         <div class="card-body">
                             <h6 class="text-muted">En Cours</h6>
                             <div class="stats-number text-warning">{{ trades|filter(t => t.status == 'open')|length }}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card stats-card">
-                        <div class="card-body">
-                            <h6 class="text-muted">Gagnants</h6>
-                            <div class="stats-number text-success">{{ trades|filter(t => t.result and t.result.name == 'Gagnant')|length }}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card stats-card">
-                        <div class="card-body">
-                            <h6 class="text-muted">Perdants</h6>
-                            <div class="stats-number text-danger">{{ trades|filter(t => t.result and t.result.name == 'Perdant')|length }}</div>
                         </div>
                     </div>
                 </div>

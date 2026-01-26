@@ -5,11 +5,9 @@ namespace App\Form;
 use App\Entity\Trade;
 use App\Entity\Timeframe;
 use App\Entity\Confluence;
-use App\Entity\Setup;
 use App\Entity\TradeError;
 use App\Entity\TradeType as EntityTradeType;
 use App\Entity\Trend;
-use App\Entity\Result;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -82,12 +80,6 @@ class TradeTypeForm extends AbstractType
                 'label' => 'Risque pris (%)',
                 'scale' => 2
             ])
-            ->add('result', EntityType::class, [
-                'class' => Result::class,
-                'required' => false,
-                'choice_label' => 'name',
-                'label' => 'Résultat'
-            ])
             ->add('initialRR', NumberType::class, [
                 'required' => false,
                 'label' => 'RR initial',
@@ -135,13 +127,7 @@ class TradeTypeForm extends AbstractType
                 'choice_label' => 'name',
                 'label' => 'Confluences'
             ])
-            ->add('setups', EntityType::class, [
-                'class' => Setup::class,
-                'multiple' => true,
-                'expanded' => true,
-                'choice_label' => 'name',
-                'label' => 'Setups'
-            ])->add('executionReason', TextareaType::class, [
+            ->add('executionReason', TextareaType::class, [
                 'required' => false,
                 'label' => 'Raison d\'exécution',
                 'attr' => ['rows' => 4]
