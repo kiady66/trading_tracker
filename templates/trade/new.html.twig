@@ -93,17 +93,6 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div class="mb-3">
-                            {{ form_label(form.setups, null, {'label_attr': {'class': 'form-label fw-bold mb-2 d-block'}}) }}
-                            <div class="checkbox-group">
-                                {% for setup in form.setups %}
-                                    <div class="form-check mb-2">
-                                        {{ form_widget(setup, {'attr': {'class': 'form-check-input'}}) }}
-                                        {{ form_label(setup, null, {'label_attr': {'class': 'form-check-label'}}) }}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -115,7 +104,6 @@
                         <h5 class="card-title mb-0"><i class="bi bi-trophy"></i> Résultat</h5>
                     </div>
                     <div class="card-body">
-                        {{ form_row(form.result, {'attr': {'class': 'form-control'}}) }}
                         <div class="mb-3">
                             <div class="form-check form-switch">
                                 {{ form_widget(form.tradeManagement, {'attr': {'class': 'form-check-input'}}) }}

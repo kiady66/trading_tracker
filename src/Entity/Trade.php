@@ -69,9 +69,6 @@ class Trade
     #[ORM\Column(type: Types::FLOAT)]
     private ?float $riskPercentage = null;
 
-    #[ORM\ManyToOne(targetEntity: Result::class, inversedBy: 'trades')]
-    private ?Result $result = null;
-
     #[ORM\Column(type: Types::FLOAT, nullable: true)]
     private ?float $initialRR = null;
 
@@ -111,9 +108,6 @@ class Trade
     #[ORM\ManyToMany(targetEntity: Confluence::class, inversedBy: 'trades')]
     private Collection $confluences;
 
-    #[ORM\ManyToMany(targetEntity: Setup::class, inversedBy: 'trades')]
-    private Collection $setups;
-
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $executionReason = null;
 
@@ -141,7 +135,6 @@ class Trade
     {
         $this->timeframes = new ArrayCollection();
         $this->confluences = new ArrayCollection();
-        $this->setups = new ArrayCollection();
         $this->screenshots = new ArrayCollection();
         $this->watchlistDate = new \DateTime();
     }
@@ -248,17 +241,6 @@ class Trade
         $this->riskPercentage = $riskPercentage;
         $this->calculateGainRR();
         $this->calculateGainEuro();
-        return $this;
-    }
-
-    public function getResult(): ?Result
-    {
-        return $this->result;
-    }
-
-    public function setResult(?Result $result): self
-    {
-        $this->result = $result;
         return $this;
     }
 
@@ -416,28 +398,6 @@ class Trade
     public function removeConfluence(Confluence $confluence): self
     {
         $this->confluences->removeElement($confluence);
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Setup>
-     */
-    public function getSetups(): Collection
-    {
-        return $this->setups;
-    }
-
-    public function addSetup(Setup $setup): self
-    {
-        if (!$this->setups->contains($setup)) {
-            $this->setups->add($setup);
-        }
-        return $this;
-    }
-
-    public function removeSetup(Setup $setup): self
-    {
-        $this->setups->removeElement($setup);
         return $this;
     }
 

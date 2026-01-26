@@ -20,7 +20,6 @@ class TradeRepository extends ServiceEntityRepository
     public function getStatistics(array $filters = [])
     {
         $qb = $this->createQueryBuilder('t')
-            ->andWhere('t.result IS NOT NULL')
             ->andWhere('t.exitDate IS NOT NULL');
 
         $this->applyFilters($qb, $filters);
@@ -29,26 +28,13 @@ class TradeRepository extends ServiceEntityRepository
 
         $stats = [
             'total_trades' => count($trades),
-            'winning_trades' => 0,
-            'losing_trades' => 0,
             'total_gain_euro' => 0,
             'total_gain_rr' => 0,
-            'winning_gain_euro' => 0,
-            'losing_gain_euro' => 0,
-            'max_win_euro' => 0,
-            'max_loss_euro' => 0,
-            'avg_win_euro' => 0,
-            'avg_loss_euro' => 0,
+            'avg_gain_euro' => 0,
             'avg_gain_rr' => 0,
-            'avg_win_rr' => 0,
-            'avg_loss_rr' => 0,
-            'win_rate' => 0,
+            'max_gain_euro' => 0,
+            'min_gain_euro' => 0,
         ];
-
-        $winningGains = [];
-        $losingGains = [];
-        $winningRR = [];
-        $losingRR = [];
 
         foreach ($trades as $trade) {
             $gainEuro = $trade->getGainEuro() ?? 0;
@@ -57,41 +43,19 @@ class TradeRepository extends ServiceEntityRepository
             $stats['total_gain_euro'] += $gainEuro;
             $stats['total_gain_rr'] += $finalRR;
 
-            if ($trade->getResult() && $trade->getResult()->getName() === 'Gagnant') {
-                $stats['winning_trades']++;
-                $stats['winning_gain_euro'] += $gainEuro;
-                $winningGains[] = $gainEuro;
-                $winningRR[] = $finalRR;
+            if ($gainEuro > $stats['max_gain_euro']) {
+                $stats['max_gain_euro'] = $gainEuro;
+            }
 
-                if ($gainEuro > $stats['max_win_euro']) {
-                    $stats['max_win_euro'] = $gainEuro;
-                }
-            } else {
-                $stats['losing_trades']++;
-                $stats['losing_gain_euro'] += $gainEuro;
-                $losingGains[] = $gainEuro;
-                $losingRR[] = $finalRR;
-
-                if ($gainEuro < $stats['max_loss_euro']) {
-                    $stats['max_loss_euro'] = $gainEuro;
-                }
+            if ($gainEuro < $stats['min_gain_euro']) {
+                $stats['min_gain_euro'] = $gainEuro;
             }
         }
 
         // Calcul des moyennes
-        if ($stats['winning_trades'] > 0) {
-            $stats['avg_win_euro'] = $stats['winning_gain_euro'] / $stats['winning_trades'];
-            $stats['avg_win_rr'] = array_sum($winningRR) / count($winningRR);
-        }
-
-        if ($stats['losing_trades'] > 0) {
-            $stats['avg_loss_euro'] = $stats['losing_gain_euro'] / $stats['losing_trades'];
-            $stats['avg_loss_rr'] = array_sum($losingRR) / count($losingRR);
-        }
-
         if ($stats['total_trades'] > 0) {
+            $stats['avg_gain_euro'] = $stats['total_gain_euro'] / $stats['total_trades'];
             $stats['avg_gain_rr'] = $stats['total_gain_rr'] / $stats['total_trades'];
-            $stats['win_rate'] = ($stats['winning_trades'] / $stats['total_trades']) * 100;
         }
 
         return $stats;
@@ -100,7 +64,6 @@ class TradeRepository extends ServiceEntityRepository
     public function getChartData(array $filters = [])
     {
         $qb = $this->createQueryBuilder('t')
-            ->andWhere('t.result IS NOT NULL')
             ->andWhere('t.exitDate IS NOT NULL')
             ->orderBy('t.exitDate', 'ASC');
 
@@ -155,7 +118,6 @@ class TradeRepository extends ServiceEntityRepository
     {
         $qb = $this->createQueryBuilder('t')
             ->leftJoin('t.confluences', 'c')
-            ->andWhere('t.result IS NOT NULL')
             ->andWhere('t.exitDate IS NOT NULL');
 
         $this->applyFilters($qb, $filters);
@@ -171,7 +133,6 @@ class TradeRepository extends ServiceEntityRepository
                 if (!isset($confluenceStats[$confluenceName])) {
                     $confluenceStats[$confluenceName] = [
                         'count' => 0,
-                        'wins' => 0,
                         'total_gain' => 0,
                         'total_rr' => 0,
                     ];
@@ -180,17 +141,12 @@ class TradeRepository extends ServiceEntityRepository
                 $confluenceStats[$confluenceName]['count']++;
                 $confluenceStats[$confluenceName]['total_gain'] += $trade->getGainEuro() ?? 0;
                 $confluenceStats[$confluenceName]['total_rr'] += $trade->getFinalRR() ?? 0;
-
-                if ($trade->getResult() && $trade->getResult()->getName() === 'Gagnant') {
-                    $confluenceStats[$confluenceName]['wins']++;
-                }
             }
         }
 
-        // Calcul des pourcentages
+        // Calcul des moyennes
         foreach ($confluenceStats as &$stats) {
             if ($stats['count'] > 0) {
-                $stats['win_rate'] = ($stats['wins'] / $stats['count']) * 100;
                 $stats['avg_gain'] = $stats['total_gain'] / $stats['count'];
                 $stats['avg_rr'] = $stats['total_rr'] / $stats['count'];
             }
@@ -235,18 +191,14 @@ class TradeRepository extends ServiceEntityRepository
             ->select([
                 't.day',
                 'COUNT(t.id) as total_trades',
-                'SUM(CASE WHEN r.name = :win_name THEN 1 ELSE 0 END) as winning_trades',
                 'SUM(t.gainEuro) as total_gain_euro',
                 'SUM(t.gainRR) as total_gain_rr',
                 'AVG(t.gainEuro) as avg_gain_euro',
                 'AVG(t.gainRR) as avg_gain_rr'
             ])
-            ->leftJoin('t.result', 'r')
-            ->andWhere('t.result IS NOT NULL')
             ->andWhere('t.exitDate IS NOT NULL')
             ->andWhere('t.day IS NOT NULL')
-            ->groupBy('t.day')
-            ->setParameter('win_name', 'Gagnant');
+            ->groupBy('t.day');
 
         $this->applyFilters($qb, $filters);
 
@@ -259,12 +211,10 @@ class TradeRepository extends ServiceEntityRepository
         foreach ($daysOrder as $day) {
             $dayStats[$day] = [
                 'total_trades' => 0,
-                'winning_trades' => 0,
                 'total_gain_euro' => 0,
                 'total_gain_rr' => 0,
                 'avg_gain_euro' => 0,
                 'avg_gain_rr' => 0,
-                'win_rate' => 0
             ];
         }
 
@@ -273,13 +223,10 @@ class TradeRepository extends ServiceEntityRepository
             if (isset($dayStats[$day])) {
                 $dayStats[$day] = [
                     'total_trades' => (int)$result['total_trades'],
-                    'winning_trades' => (int)$result['winning_trades'],
                     'total_gain_euro' => (float)$result['total_gain_euro'],
                     'total_gain_rr' => (float)$result['total_gain_rr'],
                     'avg_gain_euro' => (float)$result['avg_gain_euro'],
                     'avg_gain_rr' => (float)$result['avg_gain_rr'],
-                    'win_rate' => $result['total_trades'] > 0 ?
-                        ((int)$result['winning_trades'] / (int)$result['total_trades']) * 100 : 0
                 ];
             }
         }

@@ -4,11 +4,9 @@ namespace App\DataFixtures;
 
 use App\Entity\Timeframe;
 use App\Entity\Confluence;
-use App\Entity\Setup;
 use App\Entity\TradeError;
 use App\Entity\TradeType;
 use App\Entity\Trend;
-use App\Entity\Result;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
@@ -22,14 +20,6 @@ class AppFixtures extends Fixture
             $timeframe = new Timeframe();
             $timeframe->setName($name);
             $manager->persist($timeframe);
-        }
-
-        // Results
-        $results = ['Gagnant', 'Perdant', 'Break-even'];
-        foreach ($results as $name) {
-            $result = new Result();
-            $result->setName($name);
-            $manager->persist($result);
         }
 
         // Trade Types
@@ -62,14 +52,6 @@ class AppFixtures extends Fixture
             $confluence = new Confluence();
             $confluence->setName($name);
             $manager->persist($confluence);
-        }
-
-        // Setups
-        $setups = ['Breakout', 'Pullback', 'Reversal', 'Continuation'];
-        foreach ($setups as $name) {
-            $setup = new Setup();
-            $setup->setName($name);
-            $manager->persist($setup);
         }
 
         $manager->flush();
