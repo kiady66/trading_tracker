@@ -121,6 +121,24 @@
                                 {{ form_label(form.goodTrade, null, {'label_attr': {'class': 'form-check-label fw-bold'}}) }}
                             </div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Qualité du trade</label>
+                            <div data-controller="star-rating">
+                                {{ form_widget(form.tradeQuality, {'attr': {'class': 'd-none', 'data-star-rating-target': 'input'}}) }}
+                                <div class="d-flex gap-2 mt-1">
+                                    {% for i in 1..5 %}
+                                        <i class="bi bi-star fs-3 text-secondary"
+                                           style="cursor: pointer; transition: transform 0.1s;"
+                                           data-star-rating-target="star"
+                                           data-value="{{ i }}"
+                                           data-action="mouseover->star-rating#hover mouseout->star-rating#reset click->star-rating#select"
+                                           onmouseover="this.style.transform='scale(1.2)'"
+                                           onmouseout="this.style.transform='scale(1)'"></i>
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">Cliquer à nouveau sur la même étoile pour effacer</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
