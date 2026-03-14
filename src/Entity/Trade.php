@@ -102,6 +102,9 @@ class Trade
     #[ORM\Column(type: Types::BOOLEAN, nullable: true)]
     private ?bool $goodTrade = null;
 
+    #[ORM\Column(type: Types::INTEGER, nullable: true)]
+    private ?int $tradeQuality = null;
+
     #[ORM\Column(length: 20)]
     private ?string $status = 'watching';
 
@@ -365,6 +368,17 @@ class Trade
     public function setGoodTrade(?bool $goodTrade): self
     {
         $this->goodTrade = $goodTrade;
+        return $this;
+    }
+
+    public function getTradeQuality(): ?int
+    {
+        return $this->tradeQuality;
+    }
+
+    public function setTradeQuality(?int $tradeQuality): self
+    {
+        $this->tradeQuality = $tradeQuality;
         return $this;
     }
 

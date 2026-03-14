@@ -18,6 +18,7 @@ use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use App\Entity\Trade as EntityTrade;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -119,6 +120,11 @@ class TradeTypeForm extends AbstractType
             ->add('goodTrade', CheckboxType::class, [
                 'required' => false,
                 'label' => 'Bon trade'
+            ])
+            ->add('tradeQuality', IntegerType::class, [
+                'required' => false,
+                'label' => false,
+                'attr' => ['min' => 1, 'max' => 5],
             ])
             ->add('confluences', EntityType::class, [
                 'class' => Confluence::class,

@@ -234,6 +234,19 @@
                             </div>
 
                             <div class="mb-3">
+                                <strong>Qualité du trade:</strong>
+                                <div class="d-flex gap-1 mt-1">
+                                    {% if trade.tradeQuality is not null %}
+                                        {% for i in 1..5 %}
+                                            <i class="bi {{ i <= trade.tradeQuality ? 'bi-star-fill text-warning' : 'bi-star text-secondary' }} fs-5"></i>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
                                 <strong>Jour:</strong>
                                 <div>{{ trade.day ?? '-' }}</div>
                             </div>
