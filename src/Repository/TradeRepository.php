@@ -34,6 +34,9 @@ class TradeRepository extends ServiceEntityRepository
             'avg_gain_rr' => 0,
             'max_gain_euro' => 0,
             'min_gain_euro' => 0,
+            'winning_trades' => 0,
+            'losing_trades' => 0,
+            'win_rate' => 0,
         ];
 
         foreach ($trades as $trade) {
@@ -42,6 +45,12 @@ class TradeRepository extends ServiceEntityRepository
 
             $stats['total_gain_euro'] += $gainEuro;
             $stats['total_gain_rr'] += $finalRR;
+
+            if ($gainEuro > 0) {
+                $stats['winning_trades']++;
+            } elseif ($gainEuro < 0) {
+                $stats['losing_trades']++;
+            }
 
             if ($gainEuro > $stats['max_gain_euro']) {
                 $stats['max_gain_euro'] = $gainEuro;
@@ -52,10 +61,11 @@ class TradeRepository extends ServiceEntityRepository
             }
         }
 
-        // Calcul des moyennes
+        // Calcul des moyennes et win rate
         if ($stats['total_trades'] > 0) {
             $stats['avg_gain_euro'] = $stats['total_gain_euro'] / $stats['total_trades'];
             $stats['avg_gain_rr'] = $stats['total_gain_rr'] / $stats['total_trades'];
+            $stats['win_rate'] = ($stats['winning_trades'] / $stats['total_trades']) * 100;
         }
 
         return $stats;
@@ -188,46 +198,47 @@ class TradeRepository extends ServiceEntityRepository
     public function getDayStats(array $filters = [])
     {
         $qb = $this->createQueryBuilder('t')
-            ->select([
-                't.day',
-                'COUNT(t.id) as total_trades',
-                'SUM(t.gainEuro) as total_gain_euro',
-                'SUM(t.gainRR) as total_gain_rr',
-                'AVG(t.gainEuro) as avg_gain_euro',
-                'AVG(t.gainRR) as avg_gain_rr'
-            ])
             ->andWhere('t.exitDate IS NOT NULL')
-            ->andWhere('t.day IS NOT NULL')
-            ->groupBy('t.day');
+            ->andWhere('t.day IS NOT NULL');
 
         $this->applyFilters($qb, $filters);
 
-        $results = $qb->getQuery()->getResult();
+        $trades = $qb->getQuery()->getResult();
 
-        // Organiser par jours de la semaine dans l'ordre
         $daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
         $dayStats = [];
 
         foreach ($daysOrder as $day) {
             $dayStats[$day] = [
                 'total_trades' => 0,
+                'winning_trades' => 0,
                 'total_gain_euro' => 0,
                 'total_gain_rr' => 0,
                 'avg_gain_euro' => 0,
                 'avg_gain_rr' => 0,
+                'win_rate' => 0,
             ];
         }
 
-        foreach ($results as $result) {
-            $day = $result['day'];
-            if (isset($dayStats[$day])) {
-                $dayStats[$day] = [
-                    'total_trades' => (int)$result['total_trades'],
-                    'total_gain_euro' => (float)$result['total_gain_euro'],
-                    'total_gain_rr' => (float)$result['total_gain_rr'],
-                    'avg_gain_euro' => (float)$result['avg_gain_euro'],
-                    'avg_gain_rr' => (float)$result['avg_gain_rr'],
-                ];
+        foreach ($trades as $trade) {
+            $day = $trade->getDay();
+            if (!isset($dayStats[$day])) {
+                continue;
+            }
+            $gainEuro = $trade->getGainEuro() ?? 0;
+            $dayStats[$day]['total_trades']++;
+            $dayStats[$day]['total_gain_euro'] += $gainEuro;
+            $dayStats[$day]['total_gain_rr'] += $trade->getGainRR() ?? 0;
+            if ($gainEuro > 0) {
+                $dayStats[$day]['winning_trades']++;
+            }
+        }
+
+        foreach ($dayStats as $day => &$stats) {
+            if ($stats['total_trades'] > 0) {
+                $stats['avg_gain_euro'] = $stats['total_gain_euro'] / $stats['total_trades'];
+                $stats['avg_gain_rr'] = $stats['total_gain_rr'] / $stats['total_trades'];
+                $stats['win_rate'] = ($stats['winning_trades'] / $stats['total_trades']) * 100;
             }
         }
 
