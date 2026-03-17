@@ -7,7 +7,11 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <!-- Select2 -->
+    <!-- jQuery + Select2 -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/fr.js"></script>
+    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <style>
@@ -347,11 +351,6 @@
 
 {% block javascripts %}
     {{ parent() }}
-    <!-- jQuery (nécessaire pour Select2) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- Select2 -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/fr.js"></script>
     <script>
 
         function toggleBlur(elementId) {
@@ -359,7 +358,20 @@
             element.classList.toggle('blurred');
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        (function tryInitCharts() {
+            if (!document.getElementById('winRateChart')) return;
+
+            if (typeof Chart === 'undefined' || typeof $ === 'undefined') {
+                requestAnimationFrame(tryInitCharts);
+                return;
+            }
+
+            // Détruire les instances Chart.js existantes avant de recréer
+            ['winRateChart', 'gainRRChart', 'finalRRChart', 'gainsChart'].forEach(function(id) {
+                const existing = Chart.getChart(id);
+                if (existing) existing.destroy();
+            });
+
             // Initialisation de Select2 en français
             $('select[name="confluences[]"]').select2({
                 theme: 'bootstrap-5',
@@ -513,6 +525,6 @@
                     }
                 }
             });
-        });
+        })();
     </script>
 {% endblock %}
