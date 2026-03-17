@@ -24,6 +24,7 @@ class Trade
         'EUR/GBP',
         'EUR/JPY',
         'GBP/JPY',
+        'GBP/CHF',
         'NZD/JPY',
         'AUD/GBP',
         'AUD/NZD',
