@@ -5,251 +5,589 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Trading Tracker{% endblock %}</title>
 
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --success-color: #27ae60;
-            --danger-color: #e74c3c;
-            --warning-color: #f39c12;
-            --light-bg: #f8f9fa;
+            --primary:    #2c3e50;
+            --primary-2:  #34495e;
+            --text-main:  #1e293b;
+            --text-muted: #64748b;
+            --border:     #e2e8f0;
         }
+
+        * { box-sizing: border-box; }
 
         body {
-            background-color: var(--light-bg);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            padding-top: 65px;
         }
 
-        .navbar-brand {
-            font-weight: bold;
-            color: var(--secondary-color) !important;
+        /* ── NAVBAR ────────────────────────────── */
+        .app-navbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            height: 65px;
+            padding: 0 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--primary);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
         }
 
-        .card {
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+
+        .nav-brand .brand-icon {
+            width: 32px; height: 32px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        .nav-center {
+            display: flex;
+            align-items: center;
+            gap: 0.1rem;
+        }
+
+        .nav-link-app {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .nav-link-app:hover,
+        .nav-link-app.active {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .dropdown-menu {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.4rem;
+            min-width: 180px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .dropdown-item {
+            color: var(--text-muted);
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.875rem;
+            transition: all 0.15s;
+        }
+
+        .dropdown-item:hover {
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .dropdown-item.text-danger { color: #ef4444 !important; }
+        .dropdown-item.text-danger:hover { background: #fef2f2; }
+
+        .dropdown-divider { border-color: var(--border); margin: 0.3rem 0; }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .btn-nav-ghost {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: rgba(255,255,255,0.75);
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-nav-ghost:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .btn-nav-primary {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--primary);
+            background: #fff;
             border: none;
-            transition: transform 0.2s ease;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-nav-primary:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .navbar-toggler-app {
+            display: none;
+            background: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 0.35rem 0.6rem;
+            color: rgba(255,255,255,0.75);
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .navbar-toggler-app { display: flex; align-items: center; }
+            .nav-center { display: none; flex-direction: column; align-items: flex-start; }
+            .nav-center.open { display: flex; }
+            .app-navbar { flex-wrap: wrap; height: auto; padding: 0.75rem 1rem; gap: 0.5rem; }
+            .nav-brand { flex: 1; }
+        }
+
+        /* ── PAGE WRAPPER ──────────────────────── */
+        .page-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* ── ALERTS ────────────────────────────── */
+        .alert {
+            border-radius: 10px;
+            border: 1px solid;
+            font-size: 0.9rem;
+            padding: 0.75rem 1rem;
+        }
+
+        .alert-success {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+
+        .alert-warning {
+            background: #fffbeb;
+            border-color: #fed7aa;
+            color: #92400e;
+        }
+
+        /* ── CARDS ─────────────────────────────── */
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .card:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
         }
 
         .card-header {
-            border-radius: 15px 15px 0 0 !important;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            border-radius: 14px 14px 0 0 !important;
+            color: var(--text-main);
             font-weight: 600;
+            padding: 1rem 1.25rem;
         }
 
+        .card-body { padding: 1.25rem; }
+
+        .card-footer {
+            background: #f8fafc;
+            border-top: 1px solid var(--border);
+            border-radius: 0 0 14px 14px !important;
+            padding: 0.75rem 1.25rem;
+        }
+
+        /* ── BUTTONS ───────────────────────────── */
         .btn {
             border-radius: 8px;
             font-weight: 500;
-            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            transition: all 0.2s;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
-            border: none;
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
         }
 
         .btn-primary:hover {
+            background: var(--primary-2);
+            border-color: var(--primary-2);
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
         }
 
-        .form-control, .form-select {
+        .btn-success {
+            background: #16a34a;
+            border-color: #16a34a;
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            background: #15803d;
+            border-color: #15803d;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            border-color: #f59e0b;
+            color: #fff;
+        }
+
+        .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+            background: transparent;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-outline-secondary {
+            color: var(--text-muted);
+            border-color: var(--border);
+            background: transparent;
+        }
+
+        .btn-outline-secondary:hover {
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .btn-outline-danger {
+            color: #ef4444;
+            border-color: #fecaca;
+            background: transparent;
+        }
+
+        .btn-outline-danger:hover {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            border-color: var(--border);
+            color: var(--text-muted);
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+
+        /* ── FORMS ─────────────────────────────── */
+        .form-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+        }
+
+        .form-control,
+        .form-select {
+            background: #fff;
+            border: 1px solid var(--border);
             border-radius: 8px;
-            border: 2px solid #e9ecef;
-            padding: 12px;
-            transition: all 0.3s ease;
+            color: var(--text-main);
+            padding: 0.55rem 0.85rem;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
-        .form-control:focus, .form-select:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        .form-control:focus,
+        .form-select:focus {
+            background: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(44,62,80,0.1);
+            color: var(--text-main);
         }
 
+        .form-control::placeholder { color: var(--text-muted); }
+
+        .input-group-text {
+            background: #f8fafc;
+            border-color: var(--border);
+            color: var(--text-muted);
+        }
+
+        /* ── TABLES ────────────────────────────── */
         .table {
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: #fff;
+            color: var(--text-main);
+            border-color: var(--border);
         }
 
         .table th {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
+            background: #f8fafc;
+            color: var(--text-muted);
+            font-size: 0.78rem;
             font-weight: 600;
-            border: none;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-color: var(--border);
+            padding: 0.75rem 1rem;
         }
 
+        .table td {
+            border-color: var(--border);
+            padding: 0.75rem 1rem;
+            vertical-align: middle;
+            font-size: 0.9rem;
+        }
+
+        .table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .table-responsive {
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        /* ── BADGES ────────────────────────────── */
         .badge {
-            border-radius: 20px;
-            padding: 8px 12px;
+            border-radius: 6px;
             font-weight: 500;
+            font-size: 0.75rem;
+            padding: 0.35em 0.65em;
         }
 
-        .trade-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
+        /* ── STATS CARDS ───────────────────────── */
         .stats-card {
             text-align: center;
-            padding: 20px;
+            padding: 1.5rem;
         }
 
         .stats-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--secondary-color);
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
         }
 
-        .nav-link {
-            border-radius: 8px;
-            margin: 2px 0;
-            transition: all 0.3s ease;
+        .stats-label {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            margin-top: 0.25rem;
         }
 
-        .nav-link:hover {
-            background-color: rgba(52, 152, 219, 0.1);
+        /* ── TRADE CARD ────────────────────────── */
+        .trade-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: box-shadow 0.2s, transform 0.2s;
         }
 
+        .trade-card:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        /* ── DROPZONE ──────────────────────────── */
         .dropzone {
-            border: 2px dashed #ccc;
-            border-radius: 5px;
-            padding: 20px;
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            padding: 2rem;
             text-align: center;
             cursor: pointer;
-            transition: border-color 0.3s;
+            color: var(--text-muted);
+            background: #f8fafc;
+            transition: all 0.2s;
         }
 
-        .dropzone:hover {
-            border-color: #007bff;
-        }
-
+        .dropzone:hover,
         .dropzone.dragover {
-            border-color: #007bff;
-            background-color: #f8f9fa;
+            border-color: var(--primary);
+            color: var(--text-main);
+            background: #f1f5f9;
         }
 
-        .preview-container {
-            margin-top: 15px;
+        /* ── MISC ──────────────────────────────── */
+        h1, h2, h3, h4, h5, h6 { color: var(--text-main); }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
         }
+
+        .text-muted { color: var(--text-muted) !important; }
+
+        a { color: var(--primary); }
+        a:hover { color: var(--primary-2); }
+
+        hr { border-color: var(--border); }
 
         .preview-image {
             max-width: 100px;
             max-height: 100px;
             margin: 5px;
-            border-radius: 5px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
         }
 
+        .modal-content {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+
+        .modal-header { border-bottom: 1px solid var(--border); }
+        .modal-footer { border-top: 1px solid var(--border); }
     </style>
 
-    {% block stylesheets %}
-    {% endblock %}
+    {% block stylesheets %}{% endblock %}
 </head>
 
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-        <a class="navbar-brand" href="{{ path('app_trade_index') }}">
-            <i class="bi bi-graph-up"></i> Trading Tracker
-        </a>
 
-        {% if app.user %}
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+<nav class="app-navbar">
+    <a class="nav-brand" href="{{ app.user ? path('app_trade_index') : path('app_home') }}">
+        <div class="brand-icon"><i class="bi bi-graph-up-arrow"></i></div>
+        Trading Tracker
+    </a>
 
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ path('app_trade_index') }}">
-                            <i class="bi bi-list-ul"></i> Mes Trades
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ path('app_trade_new') }}">
-                            <i class="bi bi-plus-circle"></i> Nouveau Trade
-                        </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-gear"></i> Configuration
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ path('app_timeframe_index') }}">Timeframes</a></li>
-                            <li><a class="dropdown-item" href="{{ path('app_confluence_index') }}">Confluences</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ path('app_trade_type_index') }}">Types de Trade</a></li>
-                            <li><a class="dropdown-item" href="{{ path('app_trend_index') }}">Tendances</a></li>
-                            <li><a class="dropdown-item" href="{{ path('app_trade_error_index') }}">Erreurs</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ path('app_stats') }}">
-                            <i class="bi bi-bar-chart"></i> Statistiques
+    {% if app.user %}
+        <button class="navbar-toggler-app" onclick="this.closest('nav').querySelector('.nav-center').classList.toggle('open')">
+            <i class="bi bi-list fs-5"></i>
+        </button>
+
+        <div class="nav-center">
+            <a class="nav-link-app" href="{{ path('app_trade_index') }}">
+                <i class="bi bi-list-ul"></i> Mes Trades
+            </a>
+            <a class="nav-link-app" href="{{ path('app_trade_new') }}">
+                <i class="bi bi-plus-circle"></i> Nouveau
+            </a>
+            <a class="nav-link-app" href="{{ path('app_stats') }}">
+                <i class="bi bi-bar-chart"></i> Statistiques
+            </a>
+            <div class="dropdown">
+                <a class="nav-link-app dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-gear"></i> Configuration
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ path('app_timeframe_index') }}"><i class="bi bi-clock me-2"></i>Timeframes</a></li>
+                    <li><a class="dropdown-item" href="{{ path('app_confluence_index') }}"><i class="bi bi-diagram-3 me-2"></i>Confluences</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ path('app_trade_type_index') }}"><i class="bi bi-tag me-2"></i>Types de Trade</a></li>
+                    <li><a class="dropdown-item" href="{{ path('app_trend_index') }}"><i class="bi bi-arrow-up-right me-2"></i>Tendances</a></li>
+                    <li><a class="dropdown-item" href="{{ path('app_trade_error_index') }}"><i class="bi bi-exclamation-triangle me-2"></i>Erreurs</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="nav-right">
+            <div class="dropdown">
+                <a class="btn-nav-ghost dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-person-circle"></i>
+                    <span class="d-none d-md-inline">{{ app.user.email }}</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Mon profil</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="{{ path('app_logout') }}">
+                            <i class="bi bi-box-arrow-right me-2"></i>Déconnexion
                         </a>
                     </li>
                 </ul>
+            </div>
+        </div>
 
-                <!-- Boutons de connexion/déconnexion à droite -->
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> {{ app.user.email }}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#">
-                                    <i class="bi bi-person"></i> Mon profil
-                                </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item text-danger" href="{{ path('app_logout') }}">
-                                    <i class="bi bi-box-arrow-right"></i> Déconnexion
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        {% else %}
-            <!-- Boutons de connexion/inscription quand non connecté -->
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{{ path('app_login') }}">
-                    <i class="bi bi-box-arrow-in-right"></i> Connexion
-                </a>
-                <a class="nav-link" href="{{ path('app_register') }}">
-                    <i class="bi bi-person-plus"></i> Inscription
-                </a>
-            </div>
-        {% endif %}
-    </div>
+    {% else %}
+        <div class="nav-right">
+            <a href="{{ path('app_login') }}" class="btn-nav-ghost">
+                <i class="bi bi-person-circle"></i>
+                Se connecter
+            </a>
+            <a href="{{ path('app_register') }}" class="btn-nav-primary">
+                S'inscrire
+            </a>
+        </div>
+    {% endif %}
 </nav>
 
-<div class="container mt-4">
+<div class="page-wrapper">
     {% for message in app.flashes('success') %}
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill"></i> {{ message }}
+        <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     {% endfor %}
 
     {% for message in app.flashes('error') %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill"></i> {{ message }}
+        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     {% endfor %}
@@ -257,13 +595,10 @@
     {% block body %}{% endblock %}
 </div>
 
-<!-- Bootstrap 5 JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // Validation des formulaires
     document.addEventListener('DOMContentLoaded', function() {
-        // Enable Bootstrap validation
         const forms = document.querySelectorAll('.needs-validation');
         forms.forEach(form => {
             form.addEventListener('submit', event => {
@@ -275,7 +610,6 @@
             });
         });
 
-        // Auto-calcul des champs
         const riskPercentageInput = document.querySelector('#trade_riskPercentage');
         const finalRRInput = document.querySelector('#trade_finalRR');
         const maxRiskEuroInput = document.querySelector('#trade_maxRiskEuro');
@@ -287,22 +621,17 @@
                 const riskPercentage = parseFloat(riskPercentageInput.value) || 0;
                 const finalRR = parseFloat(finalRRInput.value) || 0;
                 const maxRiskEuro = parseFloat(maxRiskEuroInput.value) || 0;
-
                 const gainRR = finalRR * (riskPercentage / 100);
                 const gainEuro = gainRR * maxRiskEuro;
-
                 if (gainRRSpan) gainRRSpan.textContent = gainRR.toFixed(2);
                 if (gainEuroSpan) gainEuroSpan.textContent = gainEuro.toFixed(2) + ' €';
             }
         }
 
         [riskPercentageInput, finalRRInput, maxRiskEuroInput].forEach(input => {
-            if (input) {
-                input.addEventListener('input', calculateGains);
-            }
+            if (input) input.addEventListener('input', calculateGains);
         });
 
-        // Initial calculation
         calculateGains();
     });
 </script>
