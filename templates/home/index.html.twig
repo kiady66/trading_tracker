@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Tracker — Analysez vos trades, progressez plus vite</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --bg-dark: #0d1117;
+            --bg-card: #161b22;
+            --bg-card2: #1c2230;
+            --accent: #3b82f6;
+            --accent-2: #10b981;
+            --accent-glow: rgba(59, 130, 246, 0.15);
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            --border: rgba(255,255,255,0.07);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ── NAVBAR ─────────────────────────────────── */
+        .landing-nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(13, 17, 23, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-decoration: none;
+        }
+
+        .nav-brand .brand-icon {
+            width: 34px; height: 34px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-login {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 1.1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-main);
+            background: transparent;
+            border: 1px solid var(--border);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-login:hover {
+            background: var(--bg-card);
+            border-color: rgba(255,255,255,0.2);
+            color: var(--text-main);
+        }
+
+        .btn-cta-nav {
+            padding: 0.45rem 1.1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-cta-nav:hover {
+            background: #2563eb;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        /* ── HERO ────────────────────────────────────── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8rem 1.5rem 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -200px; left: 50%;
+            transform: translateX(-50%);
+            width: 800px; height: 800px;
+            background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            background: rgba(59,130,246,0.12);
+            border: 1px solid rgba(59,130,246,0.3);
+            color: #60a5fa;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.4rem, 5vw, 4rem);
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            max-width: 760px;
+            margin-bottom: 1.25rem;
+        }
+
+        .hero h1 .highlight {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 520px;
+            margin-bottom: 2.5rem;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-hero-primary {
+            padding: 0.8rem 2rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: var(--accent);
+            color: #fff;
+            text-decoration: none;
+            border: none;
+            transition: all 0.25s;
+            box-shadow: 0 0 24px rgba(59,130,246,0.35);
+        }
+
+        .btn-hero-primary:hover {
+            background: #2563eb;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 0 36px rgba(59,130,246,0.5);
+        }
+
+        .btn-hero-secondary {
+            padding: 0.8rem 2rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: transparent;
+            color: var(--text-main);
+            text-decoration: none;
+            border: 1px solid var(--border);
+            transition: all 0.25s;
+        }
+
+        .btn-hero-secondary:hover {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        /* ── STATS STRIP ─────────────────────────────── */
+        .stats-strip {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            flex-wrap: wrap;
+            padding: 3rem 1.5rem;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-item .stat-num {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-item .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        /* ── FEATURES ────────────────────────────────── */
+        .section {
+            padding: 5rem 1.5rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+        }
+
+        .section-title {
+            font-size: clamp(1.7rem, 3vw, 2.4rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+        }
+
+        .section-sub {
+            color: var(--text-muted);
+            font-size: 1rem;
+            max-width: 500px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.25rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            transition: all 0.25s;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(59,130,246,0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 32px rgba(59,130,246,0.1);
+        }
+
+        .feature-icon {
+            width: 44px; height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .feature-icon.blue { background: rgba(59,130,246,0.12); color: #60a5fa; }
+        .feature-icon.green { background: rgba(16,185,129,0.12); color: #34d399; }
+        .feature-icon.purple { background: rgba(139,92,246,0.12); color: #a78bfa; }
+        .feature-icon.orange { background: rgba(245,158,11,0.12); color: #fbbf24; }
+        .feature-icon.red { background: rgba(239,68,68,0.12); color: #f87171; }
+        .feature-icon.teal { background: rgba(20,184,166,0.12); color: #2dd4bf; }
+
+        .feature-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* ── HOW IT WORKS ────────────────────────────── */
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+            position: relative;
+        }
+
+        .step {
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .step-num {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin: 0 auto 1rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #fff;
+        }
+
+        .step h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .step p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* ── METRICS PREVIEW ─────────────────────────── */
+        .metrics-preview {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 3rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .metric-box {
+            text-align: center;
+            padding: 1.25rem;
+            background: var(--bg-card2);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+        }
+
+        .metric-value.positive { color: var(--accent-2); }
+        .metric-value.negative { color: #f87171; }
+        .metric-value.neutral { color: var(--accent); }
+
+        .metric-label {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+        }
+
+        /* ── CTA BANNER ──────────────────────────────── */
+        .cta-banner {
+            background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(16,185,129,0.1));
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 24px;
+            padding: 4rem 2rem;
+            text-align: center;
+            margin: 5rem 1.5rem;
+        }
+
+        .cta-banner h2 {
+            font-size: clamp(1.8rem, 3vw, 2.5rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+        }
+
+        .cta-banner p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        /* ── FOOTER ──────────────────────────────────── */
+        footer {
+            text-align: center;
+            padding: 2rem 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        footer a:hover { color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="landing-nav">
+        <a href="{{ path('app_home') }}" class="nav-brand">
+            <div class="brand-icon">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            Trading Tracker
+        </a>
+
+        <div class="nav-actions">
+            <a href="{{ path('app_login') }}" class="btn-login">
+                <i class="bi bi-person-circle"></i>
+                Se connecter
+            </a>
+            <a href="{{ path('app_register') }}" class="btn-cta-nav">
+                Commencer gratuitement
+            </a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-badge">
+            <i class="bi bi-stars"></i>
+            Journal de trading professionnel
+        </div>
+
+        <h1>
+            Analysez vos trades.<br>
+            <span class="highlight">Progressez plus vite.</span>
+        </h1>
+
+        <p>
+            Enregistrez chaque trade, identifiez vos patterns, suivez vos statistiques
+            et devenez le trader que vous voulez être.
+        </p>
+
+        <div class="hero-buttons">
+            <a href="{{ path('app_register') }}" class="btn-hero-primary">
+                Commencer gratuitement <i class="bi bi-arrow-right"></i>
+            </a>
+            <a href="{{ path('app_login') }}" class="btn-hero-secondary">
+                <i class="bi bi-box-arrow-in-right"></i> Se connecter
+            </a>
+        </div>
+    </section>
+
+    <!-- STATS STRIP -->
+    <div class="stats-strip">
+        <div class="stat-item">
+            <div class="stat-num">100%</div>
+            <div class="stat-label">Données privées</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">∞</div>
+            <div class="stat-label">Trades enregistrables</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">7+</div>
+            <div class="stat-label">Métriques analysées</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">0€</div>
+            <div class="stat-label">Pour commencer</div>
+        </div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="section">
+        <div class="section-label">Fonctionnalités</div>
+        <div class="section-title">Tout ce dont vous avez besoin</div>
+        <p class="section-sub">Des outils pensés pour les traders sérieux qui veulent progresser avec méthode.</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon blue"><i class="bi bi-journal-text"></i></div>
+                <h3>Journal de trades</h3>
+                <p>Enregistrez chaque trade avec ses paramètres : actif, R/R, confluences, setup, erreurs. Gardez une trace complète de votre activité.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon green"><i class="bi bi-bar-chart-line"></i></div>
+                <h3>Statistiques avancées</h3>
+                <p>Win rate, gain moyen en R, performance par timeframe ou confluence. Visualisez vos forces et vos faiblesses en un coup d'œil.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon purple"><i class="bi bi-images"></i></div>
+                <h3>Screenshots annotés</h3>
+                <p>Attachez vos captures d'entrée, de gestion et de clôture à chaque trade pour une revue visuelle de votre exécution.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon orange"><i class="bi bi-funnel"></i></div>
+                <h3>Filtres & confluences</h3>
+                <p>Créez vos propres confluences et setups, filtrez vos statistiques pour comprendre ce qui fonctionne vraiment dans votre edge.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon teal"><i class="bi bi-clock-history"></i></div>
+                <h3>Analyse temporelle</h3>
+                <p>Identifiez vos meilleures sessions par jour de la semaine, par créneau horaire et par timeframe d'analyse.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon red"><i class="bi bi-exclamation-triangle"></i></div>
+                <h3>Suivi des erreurs</h3>
+                <p>Catégorisez vos erreurs de trading pour identifier les patterns négatifs récurrents et éliminer vos biais comportementaux.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- METRICS PREVIEW -->
+    <div class="section" style="padding-top: 0;">
+        <div class="section-label">Aperçu</div>
+        <div class="section-title">Des métriques claires</div>
+        <p class="section-sub">Suivez votre évolution avec les indicateurs qui comptent vraiment.</p>
+
+        <div class="metrics-preview">
+            <div class="metric-box">
+                <div class="metric-value positive">68%</div>
+                <div class="metric-label">Win Rate</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-value positive">+2.4R</div>
+                <div class="metric-label">Gain moyen</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-value negative">-0.8R</div>
+                <div class="metric-label">Perte moyenne</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-value neutral">1:3.2</div>
+                <div class="metric-label">R/R moyen</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-value positive">+47R</div>
+                <div class="metric-label">Profit factor</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="section">
+        <div class="section-label">Comment ça marche</div>
+        <div class="section-title">Simple, rapide, efficace</div>
+        <p class="section-sub">Commencez à analyser vos trades en moins de 5 minutes.</p>
+
+        <div class="steps-grid">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h3>Créez votre compte</h3>
+                <p>Inscription gratuite et immédiate, sans carte bancaire requise.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h3>Configurez votre setup</h3>
+                <p>Ajoutez vos timeframes, confluences et types de trades personnalisés.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h3>Enregistrez vos trades</h3>
+                <p>Saisissez chaque trade avec ses screenshots et paramètres de risk management.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <h3>Analysez & progressez</h3>
+                <p>Consultez vos statistiques, identifiez vos patterns et améliorez votre edge.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA BANNER -->
+    <div style="max-width: 1100px; margin: 0 auto;">
+        <div class="cta-banner">
+            <h2>Prêt à trader avec méthode ?</h2>
+            <p>Rejoignez les traders qui analysent leurs performances et progressent chaque jour.</p>
+            <a href="{{ path('app_register') }}" class="btn-hero-primary">
+                Créer mon compte gratuitement <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>
+            &copy; {{ "now"|date("Y") }} Trading Tracker &nbsp;·&nbsp;
+            <a href="{{ path('app_login') }}">Connexion</a> &nbsp;·&nbsp;
+            <a href="{{ path('app_register') }}">Inscription</a>
+        </p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
