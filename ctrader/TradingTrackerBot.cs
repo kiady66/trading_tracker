@@ -9,7 +9,7 @@ using cAlgo.API;
 
 namespace cAlgo.Robots
 {
-    [Robot(Name = "Trading Tracker Bot", Version = "1.0", AutoStart = false)]
+    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
     public class TradingTrackerBot : Robot
     {
         // ── Paramètres configurables dans cTrader ────────────────────────────
@@ -138,7 +138,7 @@ namespace cAlgo.Robots
 
                 var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"{ApiBaseUrl}/api/trades/{tradeId}")
+                var request = new HttpRequestMessage(new System.Net.Http.HttpMethod("PATCH"), $"{ApiBaseUrl}/api/trades/{tradeId}")
                 {
                     Content = content
                 };
@@ -230,20 +230,24 @@ namespace cAlgo.Robots
         /// </summary>
         private string MapSymbol(string symbolName)
         {
-            // Cas particuliers sans slash
-            if (string.Equals(symbolName, "SP500", StringComparison.OrdinalIgnoreCase))
+            // Supprimer les suffixes broker (.i, .s, .p, etc.)
+            var dotIndex = symbolName.IndexOf('.');
+            var name = dotIndex >= 0 ? symbolName.Substring(0, dotIndex) : symbolName;
+            name = name.ToUpper();
+
+            if (name == "SP500")
                 return SupportedAssets.Contains("SP500") ? "SP500" : null;
 
-            // Format standard : insérer "/" après les 3 premiers caractères
-            if (symbolName.Length == 6)
+            // Déjà au bon format (ex: "XAU/USD")
+            if (name.Contains('/'))
+                return SupportedAssets.Contains(name) ? name : null;
+
+            // Format 6 caractères : insérer "/" après les 3 premiers (ex: "EURUSD" → "EUR/USD")
+            if (name.Length == 6)
             {
-                var formatted = symbolName.Substring(0, 3).ToUpper() + "/" + symbolName.Substring(3).ToUpper();
+                var formatted = name.Substring(0, 3) + "/" + name.Substring(3);
                 return SupportedAssets.Contains(formatted) ? formatted : null;
             }
-
-            // Déjà au bon format (ex: "XAU/USD")
-            if (symbolName.Contains('/') && SupportedAssets.Contains(symbolName.ToUpper()))
-                return symbolName.ToUpper();
 
             return null;
         }
