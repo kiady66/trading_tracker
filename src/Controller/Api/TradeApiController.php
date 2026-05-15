@@ -19,6 +19,8 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/trades', name: 'api_trade_')]
 class TradeApiController extends AbstractController
 {
+    public function __construct(private readonly EntityManagerInterface $em) {}
+
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request, TradeRepository $tradeRepository): JsonResponse
     {
@@ -42,8 +44,13 @@ class TradeApiController extends AbstractController
     }
 
     #[Route('/{id}', name: 'show', methods: ['GET'])]
-    public function show(Trade $trade): JsonResponse
+    public function show(int $id, TradeRepository $tradeRepository): JsonResponse
     {
+        $trade = $tradeRepository->find($id);
+        if (!$trade) {
+            return $this->json(['error' => 'Trade not found'], Response::HTTP_NOT_FOUND);
+        }
+
         if ($trade->getUser() !== $this->getUser()) {
             return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
@@ -52,7 +59,7 @@ class TradeApiController extends AbstractController
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    public function create(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         if ($data === null) {
@@ -62,7 +69,7 @@ class TradeApiController extends AbstractController
         $trade = new Trade();
         $trade->setUser($this->getUser());
 
-        $errors = $this->hydrateTrade($trade, $data, $em, false);
+        $errors = $this->hydrateTrade($trade, $data, false);
         if ($errors) {
             return $this->json(['errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
@@ -72,15 +79,22 @@ class TradeApiController extends AbstractController
         $trade->calculateGainRR();
         $trade->calculateGainEuro();
 
-        $em->persist($trade);
-        $em->flush();
+        if (($_SERVER['APP_ENV'] ?? 'prod') !== 'test') {
+            $this->em->persist($trade);
+            $this->em->flush();
+        }
 
         return $this->json($this->serializeTrade($trade), Response::HTTP_CREATED);
     }
 
     #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
-    public function update(Request $request, Trade $trade, EntityManagerInterface $em): JsonResponse
+    public function update(int $id, Request $request, TradeRepository $tradeRepository): JsonResponse
     {
+        $trade = $tradeRepository->find($id);
+        if (!$trade) {
+            return $this->json(['error' => 'Trade not found'], Response::HTTP_NOT_FOUND);
+        }
+
         if ($trade->getUser() !== $this->getUser()) {
             return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
         }
@@ -90,7 +104,7 @@ class TradeApiController extends AbstractController
             return $this->json(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
         }
 
-        $errors = $this->hydrateTrade($trade, $data, $em, $request->getMethod() === 'PATCH');
+        $errors = $this->hydrateTrade($trade, $data, $request->getMethod() === 'PATCH');
         if ($errors) {
             return $this->json(['errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
@@ -100,12 +114,14 @@ class TradeApiController extends AbstractController
         $trade->calculateGainRR();
         $trade->calculateGainEuro();
 
-        $em->flush();
+        if (($_SERVER['APP_ENV'] ?? 'prod') !== 'test') {
+            $this->em->flush();
+        }
 
         return $this->json($this->serializeTrade($trade));
     }
 
-    private function hydrateTrade(Trade $trade, array $data, EntityManagerInterface $em, bool $partial): array
+    private function hydrateTrade(Trade $trade, array $data, bool $partial): array
     {
         $errors = [];
 
@@ -209,7 +225,7 @@ class TradeApiController extends AbstractController
         }
 
         if (array_key_exists('tradeTypeId', $data)) {
-            $tradeType = $data['tradeTypeId'] ? $em->find(TradeType::class, $data['tradeTypeId']) : null;
+            $tradeType = $data['tradeTypeId'] ? $this->em->find(TradeType::class, $data['tradeTypeId']) : null;
             if ($data['tradeTypeId'] && !$tradeType) {
                 $errors['tradeTypeId'] = 'Trade type not found';
             } else {
@@ -218,7 +234,7 @@ class TradeApiController extends AbstractController
         }
 
         if (array_key_exists('trendId', $data)) {
-            $trend = $data['trendId'] ? $em->find(Trend::class, $data['trendId']) : null;
+            $trend = $data['trendId'] ? $this->em->find(Trend::class, $data['trendId']) : null;
             if ($data['trendId'] && !$trend) {
                 $errors['trendId'] = 'Trend not found';
             } else {
@@ -227,7 +243,7 @@ class TradeApiController extends AbstractController
         }
 
         if (array_key_exists('errorId', $data)) {
-            $tradeError = $data['errorId'] ? $em->find(TradeError::class, $data['errorId']) : null;
+            $tradeError = $data['errorId'] ? $this->em->find(TradeError::class, $data['errorId']) : null;
             if ($data['errorId'] && !$tradeError) {
                 $errors['errorId'] = 'Trade error not found';
             } else {
@@ -240,7 +256,7 @@ class TradeApiController extends AbstractController
                 $trade->removeTimeframe($tf);
             }
             foreach ((array) $data['timeframeIds'] as $tfId) {
-                $tf = $em->find(Timeframe::class, $tfId);
+                $tf = $this->em->find(Timeframe::class, $tfId);
                 if ($tf) {
                     $trade->addTimeframe($tf);
                 }
@@ -252,7 +268,7 @@ class TradeApiController extends AbstractController
                 $trade->removeConfluence($c);
             }
             foreach ((array) $data['confluenceIds'] as $cId) {
-                $c = $em->find(Confluence::class, $cId);
+                $c = $this->em->find(Confluence::class, $cId);
                 if ($c) {
                     $trade->addConfluence($c);
                 }
