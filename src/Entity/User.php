@@ -36,6 +36,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Trade::class, mappedBy: 'user')]
     private Collection $trades;
 
+    #[ORM\Column(length: 64, unique: true, nullable: true)]
+    private ?string $apiToken = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -43,6 +46,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->trades = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
+        $this->apiToken = bin2hex(random_bytes(32));
     }
 
     public function getId(): ?int
@@ -117,6 +121,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
                 $trade->setUser(null);
             }
         }
+        return $this;
+    }
+
+    public function getApiToken(): ?string
+    {
+        return $this->apiToken;
+    }
+
+    public function setApiToken(?string $apiToken): self
+    {
+        $this->apiToken = $apiToken;
+        return $this;
+    }
+
+    public function regenerateApiToken(): self
+    {
+        $this->apiToken = bin2hex(random_bytes(32));
         return $this;
     }
 

@@ -4,9 +4,17 @@ Base URL: `/api/trades`
 
 ## Authentication
 
-The API uses the same session cookie as the web application. Send requests with the session cookie obtained after logging in via the web interface (`/login`).
+The API uses **Bearer token** authentication. Each user has a personal token visible on their profile page (`/profile`).
 
-Unauthenticated requests return:
+Add the following header to every request:
+
+```
+Authorization: Bearer <your-token>
+```
+
+To get or regenerate your token: go to **Mon profil → Token API cTrader**.
+
+Unauthenticated or invalid token requests return:
 
 ```json
 HTTP 401
@@ -31,6 +39,7 @@ Returns all trades belonging to the authenticated user, sorted by `watchlistDate
 |---|---|---|
 | `status` | string | Filter by status: `watching`, `open`, `closed` |
 | `asset` | string | Filter by asset symbol (e.g. `EUR/USD`) |
+| `ctraderPositionId` | int | Find the trade linked to a specific cTrader position |
 
 **Response** `200 OK`
 
@@ -124,6 +133,7 @@ Content-Type: application/json
 | `tradeQuality` | int\|null | Quality score 1–5 |
 | `executionReason` | string\|null | Free text — why this trade was taken |
 | `noteErrors` | string\|null | Free text — mistakes noted |
+| `ctraderPositionId` | int\|null | cTrader position ID — used to link and retrieve the trade from the cBot |
 
 **Example request**
 

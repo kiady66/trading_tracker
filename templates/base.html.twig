@@ -551,7 +551,7 @@
                     <span class="d-none d-md-inline">{{ app.user.email }}</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Mon profil</a></li>
+                    <li><a class="dropdown-item" href="{{ path('app_profile_index') }}"><i class="bi bi-person me-2"></i>Mon profil</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
                         <a class="dropdown-item text-danger" href="{{ path('app_logout') }}">
