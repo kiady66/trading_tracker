@@ -1,0 +1,142 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mon profil — Trading Tracker{% endblock %}
+
+{% block body %}
+<div class="container py-4" style="max-width: 680px;">
+
+    <h1 class="mb-4" style="font-size:1.5rem; font-weight:700;">Mon profil</h1>
+
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ label == 'success' ? 'success' : 'danger' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    {# ── Informations ─────────────────────────────────── #}
+    <div class="card mb-4" style="border:1px solid var(--border); border-radius:12px;">
+        <div class="card-body p-4">
+            <h5 class="mb-3" style="font-weight:600;">Informations</h5>
+            <div class="mb-2">
+                <span class="text-muted" style="font-size:.85rem;">Email</span>
+                <div>{{ app.user.email }}</div>
+            </div>
+            <div>
+                <span class="text-muted" style="font-size:.85rem;">Membre depuis</span>
+                <div>{{ app.user.createdAt|date('d/m/Y') }}</div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Token API cTrader ─────────────────────────────── #}
+    <div class="card" style="border:1px solid var(--border); border-radius:12px;">
+        <div class="card-body p-4">
+            <h5 class="mb-1" style="font-weight:600;">
+                <i class="bi bi-key me-2"></i>Token API cTrader
+            </h5>
+            <p class="text-muted mb-3" style="font-size:.875rem;">
+                Utilisez ce token pour configurer le cBot cTrader. Gardez-le secret.
+            </p>
+
+            {% set token = app.user.apiToken %}
+            {% set masked = token|slice(0, 8) ~ '••••••••••••••••••••••••••••••••••••••••••••••••' ~ token|slice(-8) %}
+
+            <div class="mb-3">
+                <label class="form-label text-muted" style="font-size:.8rem; text-transform:uppercase; letter-spacing:.05em;">Token</label>
+                <div class="input-group">
+                    <input
+                        type="text"
+                        id="api-token-field"
+                        class="form-control font-monospace"
+                        value="{{ masked }}"
+                        data-full-token="{{ token }}"
+                        readonly
+                        style="font-size:.85rem; background:#f8fafc;"
+                    >
+                    <button
+                        class="btn btn-outline-secondary"
+                        type="button"
+                        id="btn-toggle-token"
+                        title="Afficher / masquer"
+                        onclick="toggleToken()"
+                    >
+                        <i class="bi bi-eye" id="toggle-icon"></i>
+                    </button>
+                    <button
+                        class="btn btn-outline-secondary"
+                        type="button"
+                        title="Copier"
+                        onclick="copyToken()"
+                    >
+                        <i class="bi bi-clipboard" id="copy-icon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <hr class="my-3">
+
+            <p class="text-muted mb-3" style="font-size:.85rem;">
+                <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                Régénérer un token <strong>invalide immédiatement l'ancien</strong>. Vous devrez mettre à jour cTrader.
+            </p>
+
+            <button
+                class="btn btn-outline-danger btn-sm"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#confirmRegenModal"
+            >
+                <i class="bi bi-arrow-clockwise me-1"></i>Régénérer le token
+            </button>
+        </div>
+    </div>
+</div>
+
+{# ── Modal confirmation ────────────────────────────── #}
+<div class="modal fade" id="confirmRegenModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Régénérer le token API ?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                L'ancien token sera <strong>immédiatement invalidé</strong>. Le cBot cTrader ne pourra plus se connecter tant que vous n'aurez pas mis à jour sa configuration.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="{{ path('app_profile_regenerate_token') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('regenerate_token') }}">
+                    <button type="submit" class="btn btn-danger">Oui, régénérer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let tokenVisible = false;
+
+    function toggleToken() {
+        const field = document.getElementById('api-token-field');
+        const icon = document.getElementById('toggle-icon');
+        tokenVisible = !tokenVisible;
+        field.value = tokenVisible
+            ? field.dataset.fullToken
+            : field.dataset.fullToken.slice(0, 8) + '••••••••••••••••••••••••••••••••••••••••••••••••' + field.dataset.fullToken.slice(-8);
+        icon.className = tokenVisible ? 'bi bi-eye-slash' : 'bi bi-eye';
+    }
+
+    function copyToken() {
+        const token = document.getElementById('api-token-field').dataset.fullToken;
+        navigator.clipboard.writeText(token).then(() => {
+            const icon = document.getElementById('copy-icon');
+            icon.className = 'bi bi-clipboard-check';
+            setTimeout(() => icon.className = 'bi bi-clipboard', 2000);
+        });
+    }
+</script>
+{% endblock %}

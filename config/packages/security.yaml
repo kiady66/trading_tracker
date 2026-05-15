@@ -17,8 +17,10 @@ security:
 
         api:
             pattern: ^/api/
-            stateless: false
+            stateless: true
             provider: app_user_provider
+            custom_authenticators:
+                - App\Security\ApiTokenAuthenticator
             entry_point: App\Security\ApiAuthenticationEntryPoint
 
         main:

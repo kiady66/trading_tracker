@@ -32,6 +32,10 @@ class TradeApiController extends AbstractController
             $criteria['asset'] = $asset;
         }
 
+        if ($ctraderPositionId = $request->query->get('ctraderPositionId')) {
+            $criteria['ctraderPositionId'] = (int) $ctraderPositionId;
+        }
+
         $trades = $tradeRepository->findBy($criteria, ['watchlistDate' => 'DESC']);
 
         return $this->json(array_map($this->serializeTrade(...), $trades));
@@ -200,6 +204,10 @@ class TradeApiController extends AbstractController
             $trade->setNoteErrors($data['noteErrors']);
         }
 
+        if (array_key_exists('ctraderPositionId', $data)) {
+            $trade->setCtraderPositionId($data['ctraderPositionId'] !== null ? (int) $data['ctraderPositionId'] : null);
+        }
+
         if (array_key_exists('tradeTypeId', $data)) {
             $tradeType = $data['tradeTypeId'] ? $em->find(TradeType::class, $data['tradeTypeId']) : null;
             if ($data['tradeTypeId'] && !$tradeType) {
@@ -276,6 +284,7 @@ class TradeApiController extends AbstractController
             'tradeQuality' => $trade->getTradeQuality(),
             'executionReason' => $trade->getExecutionReason(),
             'noteErrors' => $trade->getNoteErrors(),
+            'ctraderPositionId' => $trade->getCtraderPositionId(),
             'tradeType' => $trade->getTradeType() ? [
                 'id' => $trade->getTradeType()->getId(),
                 'name' => $trade->getTradeType()->getName(),

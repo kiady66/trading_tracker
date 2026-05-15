@@ -134,6 +134,9 @@ class Trade
     private ?User $user = null;
 
 
+    #[ORM\Column(type: Types::BIGINT, nullable: true, unique: true)]
+    private ?int $ctraderPositionId = null;
+
     #[ORM\OneToMany(targetEntity: TradeScreenshot::class, mappedBy: 'trade', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $screenshots;
 
@@ -541,6 +544,17 @@ class Trade
                 $screenshot->setTrade(null);
             }
         }
+        return $this;
+    }
+
+    public function getCtraderPositionId(): ?int
+    {
+        return $this->ctraderPositionId;
+    }
+
+    public function setCtraderPositionId(?int $ctraderPositionId): self
+    {
+        $this->ctraderPositionId = $ctraderPositionId;
         return $this;
     }
 
