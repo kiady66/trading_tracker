@@ -34,6 +34,7 @@ class Trade
         'AUD/JPY',
         'GBP/CAD',
         'GBP/JPY',
+        'GBP/AUD',
         'CAD/CHF',
         'CAD/JPY',
         'CHF/JPY',
@@ -42,6 +43,7 @@ class Trade
         'ETH/USD',
         // Commodities
         'XAU/USD',
+        'SP500'
     ];
 
     #[ORM\Id]
