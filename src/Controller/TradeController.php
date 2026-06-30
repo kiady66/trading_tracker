@@ -20,7 +20,7 @@ class TradeController extends AbstractController
     #[Route('/', name: 'app_trade_index', methods: ['GET'])]
     public function index(TradeRepository $tradeRepository): Response
     {
-        $trades = $tradeRepository->findBy(['user' => $this->getUser()], ['entryDate' => 'DESC']);
+        $trades = $tradeRepository->findBy(['user' => $this->getUser()], ['exitDate' => 'DESC']);
 
         return $this->render('trade/index.html.twig', [
             'trades' => $trades,
