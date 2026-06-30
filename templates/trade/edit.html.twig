@@ -180,7 +180,7 @@
                             <div class="existing-screenshots mb-3">
                                 {% for screenshot in trade.getScreenshotsByCategory('execution')|sort((a, b) => a.position <=> b.position) %}
                                     <div class="screenshot-item" data-id="{{ screenshot.id }}">
-                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}" class="img-thumbnail" style="max-height: 100px;">
+                                        <img src="{{ screenshots_base_url ~ '/' ~ screenshot.filename }}" class="img-thumbnail" style="max-height: 100px;">
                                         <button type="button" class="btn btn-danger btn-sm delete-screenshot">×</button>
                                     </div>
                                 {% endfor %}
@@ -202,7 +202,7 @@
                             <div class="existing-screenshots mb-3">
                                 {% for screenshot in trade.getScreenshotsByCategory('management')|sort((a, b) => a.position <=> b.position) %}
                                     <div class="screenshot-item" data-id="{{ screenshot.id }}">
-                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}" class="img-thumbnail" style="max-height: 100px;">
+                                        <img src="{{ screenshots_base_url ~ '/' ~ screenshot.filename }}" class="img-thumbnail" style="max-height: 100px;">
                                         <button type="button" class="btn btn-danger btn-sm delete-screenshot">×</button>
                                     </div>
                                 {% endfor %}
@@ -226,7 +226,7 @@
                             <div class="existing-screenshots mb-3">
                                 {% for screenshot in trade.getScreenshotsByCategory('closing')|sort((a, b) => a.position <=> b.position) %}
                                     <div class="screenshot-item" data-id="{{ screenshot.id }}">
-                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}" class="img-thumbnail" style="max-height: 100px;">
+                                        <img src="{{ screenshots_base_url ~ '/' ~ screenshot.filename }}" class="img-thumbnail" style="max-height: 100px;">
                                         <button type="button" class="btn btn-danger btn-sm delete-screenshot">×</button>
                                     </div>
                                 {% endfor %}

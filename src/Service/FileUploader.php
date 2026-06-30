@@ -2,24 +2,19 @@
 
 namespace App\Service;
 
+use League\Flysystem\FilesystemOperator;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 class FileUploader
 {
-    private string $targetDirectory;
-    private SluggerInterface $slugger;
-    private int $maxFileSizeKB;
-    private int $compressionQuality;
-
-    public function __construct($targetDirectory, SluggerInterface $slugger, int $maxFileSizeKB = 100, int $compressionQuality = 80)
-    {
-        $this->targetDirectory = $targetDirectory;
-        $this->slugger = $slugger;
-        $this->maxFileSizeKB = $maxFileSizeKB;
-        $this->compressionQuality = $compressionQuality;
-    }
+    public function __construct(
+        private FilesystemOperator $screenshotsStorage,
+        private SluggerInterface $slugger,
+        private int $maxFileSizeKB = 100,
+        private int $compressionQuality = 80,
+    ) {}
 
     public function upload(UploadedFile $file, int $maxFileSizeKB = null, int $compressionQuality = null): string
     {
@@ -31,21 +26,25 @@ class FileUploader
         $fileName = $safeFilename.'-'.uniqid().'.'.$file->guessExtension();
 
         try {
-            $file->move($this->getTargetDirectory(), $fileName);
+            $tmpPath = sys_get_temp_dir().'/'.$fileName;
+            $file->move(sys_get_temp_dir(), $fileName);
 
-            $filePath = $this->getTargetDirectory().'/'.$fileName;
-            $this->compressImageToMaxSize($filePath, $maxFileSizeKB, $compressionQuality);
+            $this->compressImageToMaxSize($tmpPath, $maxFileSizeKB, $compressionQuality);
 
-        } catch (FileException $e) {
-            throw new FileException('Erreur lors de l\'upload du fichier');
+            $this->screenshotsStorage->write($fileName, file_get_contents($tmpPath));
+            unlink($tmpPath);
+        } catch (\Throwable $e) {
+            throw new FileException('Erreur lors de l\'upload du fichier : '.$e->getMessage());
         }
 
         return $fileName;
     }
 
-    public function getTargetDirectory(): string
+    public function remove(string $filename): void
     {
-        return $this->targetDirectory;
+        if ($this->screenshotsStorage->fileExists($filename)) {
+            $this->screenshotsStorage->delete($filename);
+        }
     }
 
     public function compressImageToMaxSize(string $filePath, int $maxSizeKB, int $quality = 80): void
@@ -56,7 +55,6 @@ class FileUploader
 
         $currentSizeKB = filesize($filePath) / 1024;
 
-        // Si l'image est déjà plus petite que la taille maximale, on ne fait rien
         if ($currentSizeKB <= $maxSizeKB) {
             return;
         }
@@ -69,7 +67,6 @@ class FileUploader
         $mime = $info['mime'];
         $originalQuality = $quality;
 
-        // Tentative de compression progressive jusqu'à atteindre la taille souhaitée
         while ($currentSizeKB > $maxSizeKB && $quality >= 10) {
             switch ($mime) {
                 case 'image/jpeg':
@@ -86,7 +83,6 @@ class FileUploader
                     imagewebp($image, $filePath, $quality);
                     break;
                 default:
-                    // Format non supporté
                     return;
             }
 
@@ -97,13 +93,11 @@ class FileUploader
             clearstatcache(true, $filePath);
             $currentSizeKB = filesize($filePath) / 1024;
 
-            // Réduire la qualité pour la prochaine itération si nécessaire
             if ($currentSizeKB > $maxSizeKB) {
                 $quality -= 10;
             }
         }
 
-        // Si on n'arrive toujours pas à réduire suffisamment, on réduit les dimensions
         if ($currentSizeKB > $maxSizeKB) {
             $this->resizeImageToMaxSize($filePath, $maxSizeKB, $originalQuality);
         }
@@ -120,7 +114,6 @@ class FileUploader
         $width = $info[0];
         $height = $info[1];
 
-        // Créer l'image selon le format
         switch ($mime) {
             case 'image/jpeg':
                 $image = imagecreatefromjpeg($filePath);
@@ -135,7 +128,6 @@ class FileUploader
                 return;
         }
 
-        // Réduire progressivement la taille jusqu'à atteindre la limite
         $scaleFactor = 0.9;
         $currentSizeKB = filesize($filePath) / 1024;
 
@@ -145,7 +137,6 @@ class FileUploader
 
             $resizedImage = imagecreatetruecolor($newWidth, $newHeight);
 
-            // Préserver la transparence pour les PNG
             if ($mime === 'image/png') {
                 imagealphablending($resizedImage, false);
                 imagesavealpha($resizedImage, true);
@@ -153,7 +144,6 @@ class FileUploader
 
             imagecopyresampled($resizedImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
-            // Sauvegarder l'image redimensionnée
             switch ($mime) {
                 case 'image/jpeg':
                     imagejpeg($resizedImage, $filePath, $quality);
@@ -176,15 +166,6 @@ class FileUploader
         imagedestroy($image);
     }
 
-    public function remove(string $filename): void
-    {
-        $filePath = $this->getTargetDirectory().'/'.$filename;
-        if (file_exists($filePath)) {
-            unlink($filePath);
-        }
-    }
-
-    // Getters pour les paramètres
     public function getMaxFileSizeKB(): int
     {
         return $this->maxFileSizeKB;
