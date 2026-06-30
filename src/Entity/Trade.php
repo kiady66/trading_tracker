@@ -23,6 +23,7 @@ class Trade
         // Cross Pairs
         'EUR/GBP',
         'EUR/JPY',
+        'EUR/NZD',
         'GBP/JPY',
         'GBP/CHF',
         'NZD/JPY',
