@@ -308,10 +308,10 @@
                                             <div class="row g-2">
                                                 {% for screenshot in screenshotsByCategory.execution %}
                                                     <div class="col-auto">
-                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}"
+                                                        <img src="{{ screenshots_base_url ~ '/' ~ screenshot.filename }}"
                                                              class="img-thumbnail"
                                                              style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
-                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot.filename) }}')"
+                                                             onclick="openModal('{{ screenshots_base_url ~ '/' ~ screenshot.filename }}')"
                                                              alt="Screenshot exécution {{ loop.index }}">
                                                     </div>
                                                 {% endfor %}
@@ -326,10 +326,10 @@
                                             <div class="row g-2">
                                                 {% for screenshot in screenshotsByCategory.management %}
                                                     <div class="col-auto">
-                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}"
+                                                        <img src="{{ screenshots_base_url ~ '/' ~ screenshot.filename }}"
                                                              class="img-thumbnail"
                                                              style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
-                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot.filename) }}')"
+                                                             onclick="openModal('{{ screenshots_base_url ~ '/' ~ screenshot.filename }}')"
                                                              alt="Screenshot management {{ loop.index }}">
                                                     </div>
                                                 {% endfor %}
@@ -344,10 +344,10 @@
                                             <div class="row g-2">
                                                 {% for screenshot in screenshotsByCategory.closing %}
                                                     <div class="col-auto">
-                                                        <img src="{{ asset('uploads/screenshots/' ~ screenshot.filename) }}"
+                                                        <img src="{{ screenshots_base_url ~ '/' ~ screenshot.filename }}"
                                                              class="img-thumbnail"
                                                              style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
-                                                             onclick="openModal('{{ asset('uploads/screenshots/' ~ screenshot.filename) }}')"
+                                                             onclick="openModal('{{ screenshots_base_url ~ '/' ~ screenshot.filename }}')"
                                                              alt="Screenshot clôture {{ loop.index }}">
                                                     </div>
                                                 {% endfor %}

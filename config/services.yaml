@@ -19,7 +19,13 @@ services:
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
 
+    AsyncAws\S3\S3Client:
+        arguments:
+            - region: 'auto'
+              endpoint: '%env(R2_ENDPOINT)%'
+              accessKeyId: '%env(R2_ACCESS_KEY_ID)%'
+              accessKeySecret: '%env(R2_SECRET_ACCESS_KEY)%'
+
     App\Service\FileUploader:
         arguments:
-            $targetDirectory: '%kernel.project_dir%/public/uploads/screenshots'
-            $slugger: '@Symfony\Component\String\Slugger\SluggerInterface'
+            $screenshotsStorage: '@screenshots.storage'
