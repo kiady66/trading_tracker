@@ -1,0 +1,13 @@
+vendor/
+var/
+.git/
+assets/vendor/
+public/assets/
+public/uploads/
+.env
+.env.local
+docker/
+compose*.yaml
+*.md
+snapshots/
+tests/
