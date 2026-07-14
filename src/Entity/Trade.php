@@ -44,7 +44,8 @@ class Trade
         'ETH/USD',
         // Commodities
         'XAU/USD',
-        'SP500'
+        'SP500',
+        'USOIL'
     ];
 
     #[ORM\Id]
