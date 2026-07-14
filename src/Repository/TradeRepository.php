@@ -17,6 +17,26 @@ class TradeRepository extends ServiceEntityRepository
         parent::__construct($registry, Trade::class);
     }
 
+    public function findByUserAndDateRange($user, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->andWhere('t.user = :user')
+            ->setParameter('user', $user)
+            ->orderBy('t.exitDate', 'DESC');
+
+        if (!empty($startDate)) {
+            $qb->andWhere('t.entryDate >= :start_date')
+                ->setParameter('start_date', new \DateTime($startDate));
+        }
+
+        if (!empty($endDate)) {
+            $qb->andWhere('t.entryDate <= :end_date')
+                ->setParameter('end_date', new \DateTime($endDate . ' 23:59:59'));
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
     public function getStatistics(array $filters = [])
     {
         $qb = $this->createQueryBuilder('t')

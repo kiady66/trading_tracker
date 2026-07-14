@@ -18,12 +18,19 @@ use Symfony\Component\Routing\Annotation\Route;
 class TradeController extends AbstractController
 {
     #[Route('/', name: 'app_trade_index', methods: ['GET'])]
-    public function index(TradeRepository $tradeRepository): Response
+    public function index(Request $request, TradeRepository $tradeRepository): Response
     {
-        $trades = $tradeRepository->findBy(['user' => $this->getUser()], ['exitDate' => 'DESC']);
+        $startDate = $request->query->get('start_date');
+        $endDate = $request->query->get('end_date');
+
+        $trades = $tradeRepository->findByUserAndDateRange($this->getUser(), $startDate, $endDate);
 
         return $this->render('trade/index.html.twig', [
             'trades' => $trades,
+            'filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+            ],
         ]);
     }
 

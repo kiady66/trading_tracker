@@ -14,6 +14,36 @@
                 </a>
             </div>
 
+            <!-- Filtres -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Date de début</label>
+                            <input type="date" name="start_date" class="form-control"
+                                   value="{{ filters.start_date }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date de fin</label>
+                            <input type="date" name="end_date" class="form-control"
+                                   value="{{ filters.end_date }}">
+                        </div>
+                        <div class="col-md-auto">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-funnel"></i> Filtrer
+                            </button>
+                        </div>
+                        {% if filters.start_date or filters.end_date %}
+                            <div class="col-md-auto">
+                                <a href="{{ path('app_trade_index') }}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i> Réinitialiser
+                                </a>
+                            </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
             <!-- Stats Cards -->
             <div class="row mb-4">
                 <div class="col-md-6">
