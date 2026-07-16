@@ -16,11 +16,8 @@ class FileUploader
         private int $compressionQuality = 80,
     ) {}
 
-    public function upload(UploadedFile $file, int $maxFileSizeKB = null, int $compressionQuality = null): string
+    public function upload(UploadedFile $file): string
     {
-        $maxFileSizeKB = $maxFileSizeKB ?? $this->maxFileSizeKB;
-        $compressionQuality = $compressionQuality ?? $this->compressionQuality;
-
         $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $safeFilename = $this->slugger->slug($originalFilename);
         $fileName = $safeFilename.'-'.uniqid().'.'.$file->guessExtension();
@@ -28,8 +25,6 @@ class FileUploader
         try {
             $tmpPath = sys_get_temp_dir().'/'.$fileName;
             $file->move(sys_get_temp_dir(), $fileName);
-
-            $this->compressImageToMaxSize($tmpPath, $maxFileSizeKB, $compressionQuality);
 
             $this->screenshotsStorage->write($fileName, file_get_contents($tmpPath));
             unlink($tmpPath);
