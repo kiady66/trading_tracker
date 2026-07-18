@@ -349,8 +349,9 @@ class TradeRepository extends ServiceEntityRepository
             $cursor = $cursor->modify('+1 month');
         }
 
-        // Mois le plus récent en premier
-        return array_reverse($months);
+        // Mois le plus récent en premier, limité à 12 mois pour que chaque
+        // nom de mois soit unique dans le sélecteur (pas besoin de l'année)
+        return array_slice(array_reverse($months), 0, 12);
     }
 
     private function buildMonthCalendar(\DateTimeImmutable $monthStart, array $daily): array
@@ -367,6 +368,7 @@ class TradeRepository extends ServiceEntityRepository
 
         $month = [
             'label' => $frMonths[$monthNum] . ' ' . $year,
+            'month_name' => $frMonths[$monthNum],
             'total_gain' => 0,
             'total_rr' => 0,
             'total_count' => 0,
