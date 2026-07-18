@@ -197,7 +197,9 @@
                             <i class="bi bi-graph-up"></i> Évolution des Gains (€)
                         </div>
                         <div class="card-body">
-                            <canvas id="gainsChart" height="250"></canvas>
+                            <div style="height: 300px;">
+                                <canvas id="gainsChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -209,7 +211,9 @@
                             <i class="bi bi-bar-chart"></i> Gains RR par Trade
                         </div>
                         <div class="card-body">
-                            <canvas id="gainRRChart" height="250"></canvas>
+                            <div style="height: 300px;">
+                                <canvas id="gainRRChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -223,24 +227,12 @@
                             <i class="bi bi-bar-chart"></i> Final RR par Trade
                         </div>
                         <div class="card-body">
-                            <canvas id="finalRRChart" height="250"></canvas>
+                            <div style="height: 300px;">
+                                <canvas id="finalRRChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Win Rate Pie Chart -->
-                <div class="col-md-6">
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <i class="bi bi-pie-chart"></i> Win Rate
-                        </div>
-                        <div class="card-body">
-                            <canvas id="winRateChart" height="250"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-
             </div>
 
             <!-- Drawdown Chart -->
@@ -541,7 +533,7 @@
         }
 
         (function tryInitCharts() {
-            if (!document.getElementById('winRateChart')) return;
+            if (!document.getElementById('gainsChart')) return;
 
             if (typeof Chart === 'undefined' || typeof $ === 'undefined') {
                 requestAnimationFrame(tryInitCharts);
@@ -549,7 +541,7 @@
             }
 
             // Détruire les instances Chart.js existantes avant de recréer
-            ['winRateChart', 'gainRRChart', 'finalRRChart', 'gainsChart', 'drawdownChart'].forEach(function(id) {
+            ['gainRRChart', 'finalRRChart', 'gainsChart', 'drawdownChart'].forEach(function(id) {
                 const existing = Chart.getChart(id);
                 if (existing) existing.destroy();
             });
@@ -562,39 +554,6 @@
                 width: '100%',
                 language: 'fr',
                 closeOnSelect: false
-            });
-
-            // Win Rate Pie Chart
-            const winRateCtx = document.getElementById('winRateChart').getContext('2d');
-            new Chart(winRateCtx, {
-                type: 'pie',
-                data: {
-                    labels: ['Gagnants', 'Perdants'],
-                    datasets: [{
-                        data: [{{ stats.winning_trades }}, {{ stats.losing_trades }}],
-                        backgroundColor: ['#28a745', '#dc3545'],
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
             });
 
             // Gains RR Bar Chart
@@ -619,6 +578,7 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -658,6 +618,7 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -734,6 +695,7 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: {
                         y: {
                             title: {
