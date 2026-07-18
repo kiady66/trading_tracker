@@ -155,7 +155,9 @@ class TradeRepository extends ServiceEntityRepository
         // Ajouter un point de départ à 0
         if (count($trades) > 0) {
             $firstTrade = $trades[0];
-            $firstDate = $firstTrade->getExitDate()->modify('-1 day')->format('Y-m-d');
+            // Clone obligatoire : exitDate est mutable, modify() décalerait la date
+            // de l'entité partagée pour tout le reste de la requête (calendrier compris)
+            $firstDate = (clone $firstTrade->getExitDate())->modify('-1 day')->format('Y-m-d');
 
             $dates[] = $firstDate;
             $gainsEuro[] = 0;
