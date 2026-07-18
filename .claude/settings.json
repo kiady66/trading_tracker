@@ -1,3 +1,28 @@
 {
-  "model": "sonnet"
+  "model": "claude-fable-5",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(tree *)",
+      "Bash(file *)",
+      "Bash(stat *)",
+      "Bash(du *)",
+      "Bash(diff *)",
+      "Bash(which *)",
+      "Bash(pwd)",
+      "Bash(realpath *)",
+      "Bash(basename *)",
+      "Bash(dirname *)"
+    ]
+  }
 }
