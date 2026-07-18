@@ -28,6 +28,7 @@ class StatsController extends AbstractController
         $chartData = $tradeRepository->getChartData($filters);
         $confluenceStats = $tradeRepository->getConfluenceStats($filters);
         $dayStats = $tradeRepository->getDayStats($filters);
+        $calendarData = $tradeRepository->getCalendarData($filters);
 
 
         $allConfluences = $confluenceRepository->findAll();
@@ -37,6 +38,7 @@ class StatsController extends AbstractController
             'chart_data' => $chartData,
             'confluence_stats' => $confluenceStats,
             'day_stats' => $dayStats,
+            'calendar_data' => $calendarData,
             'all_confluences' => $allConfluences,
             'filters' => $filters,
         ]);
