@@ -32,6 +32,33 @@
             filter: blur(11px);
             user-select: none;
         }
+
+        .calendar-table {
+            table-layout: fixed;
+            font-size: 0.8rem;
+        }
+        .calendar-table th {
+            text-align: center;
+        }
+        .calendar-table td {
+            height: 62px;
+            padding: 4px;
+            text-align: center;
+            vertical-align: top;
+            line-height: 1.2;
+        }
+        .calendar-day-num {
+            font-size: 0.7rem;
+            color: #6c757d;
+            text-align: left;
+        }
+        .calendar-empty {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+        .calendar-week-total {
+            vertical-align: middle !important;
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
     </style>
 {% endblock %}
 
@@ -127,6 +154,39 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="card stats-card flex-fill" style="min-width: 200px; max-width: calc(25% - 12px);">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h6 class="text-muted">Profit Factor</h6>
+                        {% if stats.profit_factor is not null %}
+                            <div class="stats-number text-{{ stats.profit_factor >= 1 ? 'success' : 'danger' }}">
+                                {{ stats.profit_factor|number_format(2) }}
+                            </div>
+                        {% else %}
+                            <div class="stats-number text-{{ stats.gross_profit > 0 ? 'success' : 'muted' }}">
+                                {{ stats.gross_profit > 0 ? '∞' : '—' }}
+                            </div>
+                        {% endif %}
+                        <small class="text-muted">Gains bruts / Pertes brutes</small>
+                    </div>
+                </div>
+
+                <div class="card stats-card flex-fill" style="min-width: 200px; max-width: calc(25% - 12px);">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h6 class="text-muted">Max Drawdown</h6>
+                        <div class="d-flex justify-content-between align-items-center blurrable" id="maxDrawdownEuro">
+                            <div style="flex: 1"></div>
+                            <div style="flex: 10" class="stats-number text-danger">
+                                -{{ stats.max_drawdown_euro|default(0)|number_format(2) }} €
+                            </div>
+                            <i class="fas fa-eye clickable" onclick="toggleBlur('maxDrawdownEuro')"
+                               style="cursor: pointer; font-size: 1.2rem; flex: 1"></i>
+                        </div>
+                        <p class="card-text text-muted mb-0">
+                            Max Drawdown R: -{{ stats.max_drawdown_rr|number_format(2) }} R
+                        </p>
+                    </div>
+                </div>
             </div>
             <!-- Graphiques -->
             <div class="row mb-4">
@@ -182,6 +242,91 @@
 
 
             </div>
+
+            <!-- Drawdown Chart -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-graph-down"></i> Drawdown (€)
+                        </div>
+                        <div class="card-body">
+                            <div style="height: 300px;">
+                                <canvas id="drawdownChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendrier P&L -->
+            {% if calendar_data|length > 0 %}
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-calendar3"></i> Calendrier P&L</span>
+                        <i class="fas fa-eye clickable" onclick="toggleBlur('calendarPnl')"
+                           style="cursor: pointer; font-size: 1.2rem;"></i>
+                    </div>
+                    <div class="card-body blurrable" id="calendarPnl">
+                        <div class="row">
+                            {% for month in calendar_data %}
+                                <div class="col-lg-6 mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0">{{ month.label }}</h6>
+                                        <span class="fw-bold text-{{ month.total_gain >= 0 ? 'success' : 'danger' }}">
+                                            {{ month.total_gain|number_format(2) }} €
+                                            <small class="text-muted">({{ month.total_count }} trade{{ month.total_count > 1 ? 's' : '' }})</small>
+                                        </span>
+                                    </div>
+                                    <table class="table table-bordered calendar-table mb-0">
+                                        <thead class="table-dark">
+                                        <tr>
+                                            <th>Lun</th>
+                                            <th>Mar</th>
+                                            <th>Mer</th>
+                                            <th>Jeu</th>
+                                            <th>Ven</th>
+                                            <th class="calendar-week-total">Semaine</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for week in month.weeks %}
+                                            <tr>
+                                                {% for cell in week.days %}
+                                                    {% if cell is null %}
+                                                        <td class="calendar-empty"></td>
+                                                    {% elseif cell.data is null %}
+                                                        <td>
+                                                            <div class="calendar-day-num">{{ cell.day }}</div>
+                                                        </td>
+                                                    {% else %}
+                                                        <td class="bg-{{ cell.data.gain >= 0 ? 'success' : 'danger' }} bg-opacity-25">
+                                                            <div class="calendar-day-num">{{ cell.day }}</div>
+                                                            <div class="fw-bold text-{{ cell.data.gain >= 0 ? 'success' : 'danger' }}">
+                                                                {{ cell.data.gain|number_format(0) }} €
+                                                            </div>
+                                                            <small class="text-muted">{{ cell.data.count }} trade{{ cell.data.count > 1 ? 's' : '' }}</small>
+                                                        </td>
+                                                    {% endif %}
+                                                {% endfor %}
+                                                <td class="calendar-week-total">
+                                                    {% if week.count > 0 %}
+                                                        <div class="fw-bold text-{{ week.gain >= 0 ? 'success' : 'danger' }}">
+                                                            {{ week.gain|number_format(0) }} €
+                                                        </div>
+                                                        <small class="text-muted">{{ week.rr|number_format(1) }} R</small>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
 
             <!-- Tableau des stats détaillées -->
             <div class="card mb-4">
@@ -242,6 +387,28 @@
                                 <td>Plus grosse perte (€)</td>
                                 <td class="fw-bold text-danger">
                                     {{ stats.max_loss_euro|default(0)|number_format(2) }} €
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Max gains consécutifs</td>
+                                <td class="fw-bold text-success">{{ stats.max_win_streak }}</td>
+                                <td>Max pertes consécutives</td>
+                                <td class="fw-bold text-danger">{{ stats.max_loss_streak }}</td>
+                            </tr>
+                            <tr>
+                                <td>Série en cours</td>
+                                <td class="fw-bold text-{{ stats.current_streak > 0 ? 'success' : (stats.current_streak < 0 ? 'danger' : 'muted') }}">
+                                    {% if stats.current_streak > 0 %}
+                                        {{ stats.current_streak }} gain{{ stats.current_streak > 1 ? 's' : '' }}
+                                    {% elseif stats.current_streak < 0 %}
+                                        {{ -stats.current_streak }} perte{{ stats.current_streak < -1 ? 's' : '' }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>Profit Factor</td>
+                                <td class="fw-bold text-{{ stats.profit_factor is not null and stats.profit_factor < 1 ? 'danger' : 'success' }}">
+                                    {{ stats.profit_factor is not null ? stats.profit_factor|number_format(2) : (stats.gross_profit > 0 ? '∞' : '—') }}
                                 </td>
                             </tr>
                             </tbody>
@@ -367,7 +534,7 @@
             }
 
             // Détruire les instances Chart.js existantes avant de recréer
-            ['winRateChart', 'gainRRChart', 'finalRRChart', 'gainsChart'].forEach(function(id) {
+            ['winRateChart', 'gainRRChart', 'finalRRChart', 'gainsChart', 'drawdownChart'].forEach(function(id) {
                 const existing = Chart.getChart(id);
                 if (existing) existing.destroy();
             });
@@ -486,6 +653,49 @@
                         },
                         x: {
                             display: false
+                        }
+                    }
+                }
+            });
+
+            // Drawdown (underwater) Chart
+            const drawdownCtx = document.getElementById('drawdownChart').getContext('2d');
+            new Chart(drawdownCtx, {
+                type: 'line',
+                data: {
+                    labels: {{ chart_data.dates|json_encode|raw }},
+                    datasets: [{
+                        label: 'Drawdown (€)',
+                        data: {{ chart_data.drawdown|json_encode|raw }},
+                        backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                        borderColor: '#dc3545',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            max: 0,
+                            title: {
+                                display: true,
+                                text: 'Drawdown (€)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
                         }
                     }
                 }

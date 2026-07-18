@@ -40,7 +40,8 @@ class TradeRepository extends ServiceEntityRepository
     public function getStatistics(array $filters = [])
     {
         $qb = $this->createQueryBuilder('t')
-            ->andWhere('t.exitDate IS NOT NULL');
+            ->andWhere('t.exitDate IS NOT NULL')
+            ->orderBy('t.exitDate', 'ASC');
 
         $this->applyFilters($qb, $filters);
 
@@ -57,7 +58,22 @@ class TradeRepository extends ServiceEntityRepository
             'winning_trades' => 0,
             'losing_trades' => 0,
             'win_rate' => 0,
+            'gross_profit' => 0,
+            'gross_loss' => 0,
+            'profit_factor' => null,
+            'max_drawdown_euro' => 0,
+            'max_drawdown_rr' => 0,
+            'max_win_streak' => 0,
+            'max_loss_streak' => 0,
+            'current_streak' => 0,
         ];
+
+        $cumulativeEuro = 0;
+        $peakEuro = 0;
+        $cumulativeRR = 0;
+        $peakRR = 0;
+        $winStreak = 0;
+        $lossStreak = 0;
 
         foreach ($trades as $trade) {
             $gainEuro = $trade->getGainEuro() ?? 0;
@@ -68,9 +84,29 @@ class TradeRepository extends ServiceEntityRepository
 
             if ($gainEuro > 0) {
                 $stats['winning_trades']++;
+                $stats['gross_profit'] += $gainEuro;
+                $winStreak++;
+                $lossStreak = 0;
             } elseif ($gainEuro < 0) {
                 $stats['losing_trades']++;
+                $stats['gross_loss'] += abs($gainEuro);
+                $lossStreak++;
+                $winStreak = 0;
+            } else {
+                $winStreak = 0;
+                $lossStreak = 0;
             }
+
+            $stats['max_win_streak'] = max($stats['max_win_streak'], $winStreak);
+            $stats['max_loss_streak'] = max($stats['max_loss_streak'], $lossStreak);
+
+            $cumulativeEuro += $gainEuro;
+            $peakEuro = max($peakEuro, $cumulativeEuro);
+            $stats['max_drawdown_euro'] = max($stats['max_drawdown_euro'], $peakEuro - $cumulativeEuro);
+
+            $cumulativeRR += $finalRR;
+            $peakRR = max($peakRR, $cumulativeRR);
+            $stats['max_drawdown_rr'] = max($stats['max_drawdown_rr'], $peakRR - $cumulativeRR);
 
             if ($gainEuro > $stats['max_gain_euro']) {
                 $stats['max_gain_euro'] = $gainEuro;
@@ -79,6 +115,12 @@ class TradeRepository extends ServiceEntityRepository
             if ($gainEuro < $stats['min_gain_euro']) {
                 $stats['min_gain_euro'] = $gainEuro;
             }
+        }
+
+        $stats['current_streak'] = $winStreak > 0 ? $winStreak : -$lossStreak;
+
+        if ($stats['gross_loss'] > 0) {
+            $stats['profit_factor'] = $stats['gross_profit'] / $stats['gross_loss'];
         }
 
         // Calcul des moyennes et win rate
@@ -106,7 +148,9 @@ class TradeRepository extends ServiceEntityRepository
         $cumulativeGains = [];
         $finalRR = [];
         $gainRR = [];
+        $drawdown = [];
         $cumulative = 0;
+        $peak = 0;
 
         // Ajouter un point de départ à 0
         if (count($trades) > 0) {
@@ -118,6 +162,7 @@ class TradeRepository extends ServiceEntityRepository
             $cumulativeGains[] = 0;
             $finalRR[] = 0;
             $gainRR[] = 0;
+            $drawdown[] = 0;
         }
 
         foreach ($trades as $trade) {
@@ -133,6 +178,9 @@ class TradeRepository extends ServiceEntityRepository
 
             $cumulative += $gainEuro;
             $cumulativeGains[] = $cumulative;
+
+            $peak = max($peak, $cumulative);
+            $drawdown[] = $cumulative - $peak;
         }
 
         return [
@@ -141,6 +189,7 @@ class TradeRepository extends ServiceEntityRepository
             'cumulative_gains' => $cumulativeGains,
             'final_rr' => $finalRR,
             'gain_rr' => $gainRR,
+            'drawdown' => $drawdown,
         ];
     }
 
@@ -263,5 +312,96 @@ class TradeRepository extends ServiceEntityRepository
         }
 
         return $dayStats;
+    }
+
+    public function getCalendarData(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->andWhere('t.exitDate IS NOT NULL')
+            ->orderBy('t.exitDate', 'ASC');
+
+        $this->applyFilters($qb, $filters);
+
+        $trades = $qb->getQuery()->getResult();
+
+        // P&L journalier
+        $daily = [];
+        foreach ($trades as $trade) {
+            $key = $trade->getExitDate()->format('Y-m-d');
+            if (!isset($daily[$key])) {
+                $daily[$key] = ['gain' => 0, 'rr' => 0, 'count' => 0];
+            }
+            $daily[$key]['gain'] += $trade->getGainEuro() ?? 0;
+            $daily[$key]['rr'] += $trade->getGainRR() ?? 0;
+            $daily[$key]['count']++;
+        }
+
+        if (empty($daily)) {
+            return [];
+        }
+
+        $months = [];
+        $cursor = (new \DateTimeImmutable(array_key_first($daily)))->modify('first day of this month');
+        $end = (new \DateTimeImmutable(array_key_last($daily)))->modify('first day of this month');
+
+        while ($cursor <= $end) {
+            $months[] = $this->buildMonthCalendar($cursor, $daily);
+            $cursor = $cursor->modify('+1 month');
+        }
+
+        // Mois le plus récent en premier
+        return array_reverse($months);
+    }
+
+    private function buildMonthCalendar(\DateTimeImmutable $monthStart, array $daily): array
+    {
+        $frMonths = [
+            1 => 'Janvier', 2 => 'Février', 3 => 'Mars', 4 => 'Avril',
+            5 => 'Mai', 6 => 'Juin', 7 => 'Juillet', 8 => 'Août',
+            9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre',
+        ];
+
+        $year = (int) $monthStart->format('Y');
+        $monthNum = (int) $monthStart->format('n');
+        $daysInMonth = (int) $monthStart->format('t');
+
+        $month = [
+            'label' => $frMonths[$monthNum] . ' ' . $year,
+            'total_gain' => 0,
+            'total_rr' => 0,
+            'total_count' => 0,
+            'weeks' => [],
+        ];
+
+        $emptyWeek = ['days' => array_fill(0, 5, null), 'gain' => 0, 'rr' => 0, 'count' => 0];
+        $week = $emptyWeek;
+
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $date = $monthStart->setDate($year, $monthNum, $d);
+            $isoDay = (int) $date->format('N');
+            $data = $daily[$date->format('Y-m-d')] ?? null;
+
+            // Seuls lundi-vendredi ont une cellule ; les trades clôturés le
+            // week-end comptent quand même dans les totaux semaine/mois
+            if ($isoDay <= 5) {
+                $week['days'][$isoDay - 1] = ['day' => $d, 'data' => $data];
+            }
+
+            if ($data !== null) {
+                $week['gain'] += $data['gain'];
+                $week['rr'] += $data['rr'];
+                $week['count'] += $data['count'];
+                $month['total_gain'] += $data['gain'];
+                $month['total_rr'] += $data['rr'];
+                $month['total_count'] += $data['count'];
+            }
+
+            if ($isoDay === 7 || $d === $daysInMonth) {
+                $month['weeks'][] = $week;
+                $week = $emptyWeek;
+            }
+        }
+
+        return $month;
     }
 }
