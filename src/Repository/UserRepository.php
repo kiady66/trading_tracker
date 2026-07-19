@@ -25,4 +25,16 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $user->setPassword($newHashedPassword);
         $this->getEntityManager()->flush();
     }
+
+    /**
+     * @return User[]
+     */
+    public function findPublicProfiles(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('u.shareEnabled = true')
+            ->andWhere('u.displayName IS NOT NULL')
+            ->getQuery()
+            ->getResult();
+    }
 }
