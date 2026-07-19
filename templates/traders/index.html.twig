@@ -1,0 +1,87 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Traders - Trading Tracker{% endblock %}
+
+{% block body %}
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-people text-primary"></i> Traders
+                </h1>
+                <form method="get" class="d-flex align-items-center gap-2">
+                    <label for="sort-select" class="form-label mb-0 text-muted" style="font-size:.875rem;">Trier par</label>
+                    <select id="sort-select" name="sort" class="form-select form-select-sm" style="width:auto;"
+                            onchange="this.form.submit()">
+                        <option value="recent" {{ sort == 'recent' ? 'selected' }}>Activité récente</option>
+                        <option value="performance" {{ sort == 'performance' ? 'selected' }}>Performance</option>
+                    </select>
+                </form>
+            </div>
+
+            {% if traders is empty %}
+                <div class="card">
+                    <div class="card-body text-center py-5 text-muted">
+                        <i class="bi bi-people" style="font-size:2rem;"></i>
+                        <p class="mb-0 mt-2">Aucun trader visible pour le moment.</p>
+                    </div>
+                </div>
+            {% else %}
+                <div class="row g-3">
+                    {% for trader in traders %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h5 class="mb-0">{{ trader.owner.displayName }}</h5>
+                                            <small class="text-muted">Membre depuis {{ trader.owner.createdAt|date('m/Y') }}</small>
+                                        </div>
+                                        {% if trader.owner.shareCurrentMonthOnly %}
+                                            <span class="badge bg-info">Mois en cours</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if trader.summary is not null %}
+                                        <div class="d-flex gap-4 my-3">
+                                            <div>
+                                                <div class="text-muted" style="font-size:.75rem;">Win rate</div>
+                                                {% if trader.summary.win_rate is not null %}
+                                                    <span class="fw-bold text-{{ trader.summary.win_rate >= 50 ? 'success' : 'danger' }}">
+                                                        {{ trader.summary.win_rate|number_format(1) }}%
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">—</span>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <div class="text-muted" style="font-size:.75rem;">Total R</div>
+                                                <span class="fw-bold text-{{ trader.summary.total_rr >= 0 ? 'success' : 'danger' }}">
+                                                    {{ trader.summary.total_rr|number_format(2) }} R
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <div class="text-muted" style="font-size:.75rem;">Trades</div>
+                                                <span class="fw-bold">{{ trader.summary.trade_count }}</span>
+                                            </div>
+                                        </div>
+                                        {% if trader.owner.shareCurrentMonthOnly %}
+                                            <small class="text-muted mb-2">Stats du mois en cours</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <p class="text-muted my-3"><i class="bi bi-lock me-1"></i>Stats privées</p>
+                                    {% endif %}
+
+                                    <a href="{{ path('app_traders_profile', {pseudo: trader.owner.displayName}) }}"
+                                       class="btn btn-outline-primary btn-sm mt-auto">
+                                        Voir le profil
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

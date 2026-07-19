@@ -284,10 +284,69 @@ class TradeRepository extends ServiceEntityRepository
      */
     public function findPublicTrades($owner, array $statuses, bool $currentMonthOnly, array $filters = [], ?int $limit = null): array
     {
+        $qb = $this->createPublicTradesQueryBuilder($owner, $statuses, $currentMonthOnly);
+
+        if ($qb === null) {
+            return [];
+        }
+
+        $this->applyFilters($qb, $filters);
+
+        $qb->addSelect('COALESCE(t.exitDate, t.entryDate) AS HIDDEN sortDate')
+            ->orderBy('sortDate', 'DESC');
+
+        if ($limit !== null) {
+            $qb->setMaxResults($limit);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Résumé agrégé des trades visibles d'un trader pour la liste /traders.
+     *
+     * Retourne null si aucun trade n'est visible (le trader est alors masqué
+     * de la liste). Les métriques (total R, win rate) portent sur les trades
+     * terminés visibles ; last_activity sert au tri « Activité récente ».
+     */
+    public function getPublicSummary($owner, array $statuses, bool $currentMonthOnly): ?array
+    {
+        $qb = $this->createPublicTradesQueryBuilder($owner, $statuses, $currentMonthOnly);
+
+        if ($qb === null) {
+            return null;
+        }
+
+        $row = $qb
+            ->select('COUNT(t.id) AS trade_count')
+            ->addSelect('MAX(COALESCE(t.exitDate, t.entryDate)) AS last_activity')
+            ->addSelect("SUM(CASE WHEN t.status = 'closed' THEN COALESCE(t.gainRR, 0) ELSE 0 END) AS total_rr")
+            ->addSelect("SUM(CASE WHEN t.status = 'closed' THEN 1 ELSE 0 END) AS closed_count")
+            ->addSelect("SUM(CASE WHEN t.status = 'closed' AND t.gainRR > 0 THEN 1 ELSE 0 END) AS winning_count")
+            ->getQuery()
+            ->getSingleResult();
+
+        if ((int) $row['trade_count'] === 0) {
+            return null;
+        }
+
+        return [
+            'trade_count' => (int) $row['trade_count'],
+            'last_activity' => $row['last_activity'] !== null ? new \DateTimeImmutable($row['last_activity']) : null,
+            'total_rr' => (float) ($row['total_rr'] ?? 0),
+            'closed_count' => (int) ($row['closed_count'] ?? 0),
+            'win_rate' => ((int) ($row['closed_count'] ?? 0)) > 0
+                ? ((int) $row['winning_count'] / (int) $row['closed_count']) * 100
+                : null,
+        ];
+    }
+
+    private function createPublicTradesQueryBuilder($owner, array $statuses, bool $currentMonthOnly): ?QueryBuilder
+    {
         $statuses = array_values(array_intersect($statuses, ['open', 'closed']));
 
         if ($statuses === []) {
-            return [];
+            return null;
         }
 
         $qb = $this->createQueryBuilder('t')
@@ -302,16 +361,7 @@ class TradeRepository extends ServiceEntityRepository
                 ->setParameter('monthStart', $monthStart);
         }
 
-        $this->applyFilters($qb, $filters);
-
-        $qb->addSelect('COALESCE(t.exitDate, t.entryDate) AS HIDDEN sortDate')
-            ->orderBy('sortDate', 'DESC');
-
-        if ($limit !== null) {
-            $qb->setMaxResults($limit);
-        }
-
-        return $qb->getQuery()->getResult();
+        return $qb;
     }
 
     private function applyFilters(QueryBuilder $qb, array $filters): void

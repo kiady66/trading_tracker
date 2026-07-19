@@ -79,9 +79,17 @@
                     }) }}
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="bi bi-check-lg me-1"></i>Enregistrer
-                </button>
+                <div class="d-flex align-items-center gap-3">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-check-lg me-1"></i>Enregistrer
+                    </button>
+                    {% if app.user.isProfilePublic %}
+                        <a href="{{ path('app_traders_profile', {pseudo: app.user.displayName}) }}"
+                           style="font-size:.875rem;">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Voir mon profil public
+                        </a>
+                    {% endif %}
+                </div>
 
             {{ form_end(visibility_form) }}
         </div>

@@ -1,0 +1,251 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Trade {{ trade.asset }} de {{ pseudo }} - Trading Tracker{% endblock %}
+
+{% block body %}
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-eye text-primary"></i> Trade de {{ pseudo }}
+                </h1>
+                <a href="{{ path('app_traders_profile', {pseudo: pseudo, tab: trade.status == 'open' ? 'open' : 'closed'}) }}"
+                   class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Retour au profil
+                </a>
+            </div>
+
+            <!-- Header Card -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h2 class="h4 text-primary">{{ trade.asset }}</h2>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <span class="badge bg-{{ trade.status == 'open' ? 'info' : 'success' }}">
+                                    {{ trade.status == 'open' ? 'En cours' : 'Terminé' }}
+                                </span>
+                                <span class="badge bg-{{ trade.orderType == 'buy' ? 'success' : 'danger' }}">
+                                    {{ trade.orderType == 'buy' ? 'Achat' : 'Vente' }}
+                                </span>
+                                {% if trade.tradeType %}
+                                    <span class="badge bg-secondary">{{ trade.tradeType }}</span>
+                                {% endif %}
+                                {% if trade.trend %}
+                                    <span class="badge bg-light text-dark">{{ trade.trend }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            {% if trade.gainRR is not null %}
+                                <div class="h3 {{ trade.gainRR > 0 ? 'text-success' : (trade.gainRR < 0 ? 'text-danger' : 'text-muted') }}">
+                                    {{ trade.gainRR|number_format(2) }} R
+                                </div>
+                            {% endif %}
+                            {% if trade.finalRR is not null %}
+                                <span class="badge bg-{{ trade.finalRR > 1 ? 'success' : 'warning' }}">
+                                    RR: {{ trade.finalRR }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Informations principales -->
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-info-circle"></i> Informations principales
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-sm-4 fw-bold">Actif:</div>
+                                <div class="col-sm-8">{{ trade.asset }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4 fw-bold">Date d'entrée:</div>
+                                <div class="col-sm-8">{{ trade.entryDate ? trade.entryDate|date('d/m/Y H:i') : '-' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4 fw-bold">Date de sortie:</div>
+                                <div class="col-sm-8">{{ trade.exitDate ? trade.exitDate|date('d/m/Y H:i') : '-' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4 fw-bold">Jour:</div>
+                                <div class="col-sm-8">{{ trade.day ?? '-' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4 fw-bold">Type d'ordre:</div>
+                                <div class="col-sm-8">{{ trade.orderType }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risque (tout en R) -->
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-graph-up"></i> Gestion du risque (en R)
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-sm-4 fw-bold">Risque pris:</div>
+                                <div class="col-sm-8">{{ trade.riskPercentage }}%</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4 fw-bold">RR initial:</div>
+                                <div class="col-sm-8">{{ trade.initialRR ?? '-' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4 fw-bold">RR final:</div>
+                                <div class="col-sm-8">
+                                    {% if trade.finalRR is not null %}
+                                        <span class="badge bg-{{ trade.finalRR > 1 ? 'success' : 'warning' }}">
+                                            {{ trade.finalRR }}
+                                        </span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-sm-4 fw-bold">Gain (R):</div>
+                                <div class="col-sm-8 {{ trade.gainRR > 0 ? 'text-success fw-bold' : (trade.gainRR < 0 ? 'text-danger fw-bold' : 'text-muted') }}">
+                                    {{ trade.gainRR is not null ? trade.gainRR|number_format(2) ~ ' R' : '-' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Analyse technique -->
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-bar-chart"></i> Analyse technique
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>Timeframes:</strong>
+                                {% if trade.timeframes|length > 0 %}
+                                    <div class="mt-2">
+                                        {% for timeframe in trade.timeframes %}
+                                            <span class="badge bg-primary me-1 mb-1">{{ timeframe }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                <strong>Type de trade:</strong>
+                                <div>{{ trade.tradeType ?? '-' }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Tendance:</strong>
+                                <div>{{ trade.trend ?? '-' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stratégie -->
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-lightning-charge"></i> Stratégie
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>Confluences:</strong>
+                                {% if trade.confluences|length > 0 %}
+                                    <div class="mt-2">
+                                        {% for confluence in trade.confluences %}
+                                            <span class="badge bg-info me-1 mb-1">{{ confluence }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </div>
+                            {% if trade.executionReason %}
+                                <div class="mb-3">
+                                    <strong>Raison d'entrée:</strong>
+                                    <p class="text-muted small mb-0 mt-1">{{ trade.executionReason|nl2br }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screenshots -->
+            {% set screenshot_sections = [
+                {label: 'Screenshots Exécution', files: trade.executionScreenshots},
+                {label: 'Screenshots Management', files: trade.managementScreenshots},
+                {label: 'Screenshots Clôture', files: trade.closingScreenshots},
+            ] %}
+            {% if trade.executionScreenshots|length > 0 or trade.managementScreenshots|length > 0 or trade.closingScreenshots|length > 0 %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-images"></i> Screenshots
+                    </div>
+                    <div class="card-body">
+                        {% for section in screenshot_sections %}
+                            {% if section.files|length > 0 %}
+                                <div class="mb-4">
+                                    <h6 class="fw-bold mb-3">{{ section.label }}:</h6>
+                                    <div class="row g-2">
+                                        {% for filename in section.files %}
+                                            <div class="col-auto">
+                                                <img src="{{ screenshots_base_url ~ '/' ~ filename }}"
+                                                     class="img-thumbnail"
+                                                     style="height: 350px; width: auto; cursor: pointer; object-fit: cover;"
+                                                     onclick="openModal('{{ screenshots_base_url ~ '/' ~ filename }}')"
+                                                     alt="{{ section.label }} {{ loop.index }}">
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width: 95vw;">
+            <div class="modal-content" style="height: 95vh;">
+                <div class="modal-header">
+                    <h5 class="modal-title">Visualisation de l'image</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-0 d-flex align-items-center justify-content-center">
+                    <img src="" id="modalImage" class="img-fluid" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        function openModal(imageSrc) {
+            const modalImage = document.getElementById('modalImage');
+            const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+
+            if (modalImage) {
+                modalImage.src = imageSrc;
+                imageModal.show();
+            }
+        }
+    </script>
+{% endblock %}
