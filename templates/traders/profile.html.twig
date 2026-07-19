@@ -2,6 +2,13 @@
 
 {% block title %}{{ pseudo }} - Traders - Trading Tracker{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    {% if tab == 'stats' %}
+        {% include 'stats/_head_assets.html.twig' %}
+    {% endif %}
+{% endblock %}
+
 {% block body %}
     <div class="row">
         <div class="col-12">
@@ -57,11 +64,13 @@
                 </ul>
 
                 {% if tab == 'stats' %}
-                    <div class="card">
-                        <div class="card-body text-center py-5 text-muted">
-                            <p class="mb-0">Statistiques bientôt disponibles.</p>
-                        </div>
-                    </div>
+                    {% include 'stats/_filters.html.twig' with {extra_params: {tab: 'stats'}} %}
+                    {% include 'stats/_summary.html.twig' with stats_view %}
+                    {% include 'stats/_charts.html.twig' with stats_view %}
+                    {% include 'stats/_calendar.html.twig' with stats_view %}
+                    {% include 'stats/_detailed_table.html.twig' with stats_view %}
+                    {% include 'stats/_confluence_table.html.twig' with stats_view %}
+                    {% include 'stats/_day_table.html.twig' with stats_view %}
                 {% elseif tab == 'open' %}
                     {% include 'traders/_trade_table.html.twig' with {trades: open_trades, pseudo: pseudo, show_exit: false} %}
                 {% elseif tab == 'closed' %}
@@ -76,4 +85,11 @@
             {% endif %}
         </div>
     </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {% if tab == 'stats' %}
+        {% include 'stats/_charts_js.html.twig' with stats_view %}
+    {% endif %}
 {% endblock %}
