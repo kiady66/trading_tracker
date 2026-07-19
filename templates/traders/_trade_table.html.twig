@@ -1,0 +1,77 @@
+{# Tableau de trades publics (DTOs PublicTradeView).
+   Vars : trades, pseudo, show_exit (bool : colonnes date de sortie + RR final) #}
+{% if trades is empty %}
+    <div class="card">
+        <div class="card-body text-center py-5 text-muted">
+            <p class="mb-0">Aucun trade à afficher.</p>
+        </div>
+    </div>
+{% else %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                    <tr>
+                        <th>Actif</th>
+                        <th>Sens</th>
+                        <th>Date d'entrée</th>
+                        {% if show_exit %}
+                            <th>Date de sortie</th>
+                        {% endif %}
+                        <th>Timeframes</th>
+                        <th>Type</th>
+                        <th>RR initial</th>
+                        {% if show_exit %}
+                            <th>RR final</th>
+                        {% endif %}
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for trade in trades %}
+                        <tr>
+                            <td class="fw-bold">{{ trade.asset }}</td>
+                            <td>
+                                <span class="badge bg-{{ trade.orderType == 'buy' ? 'success' : 'danger' }}">
+                                    {{ trade.orderType == 'buy' ? 'Achat' : 'Vente' }}
+                                </span>
+                            </td>
+                            <td>{{ trade.entryDate ? trade.entryDate|date('d/m/Y H:i') : '-' }}</td>
+                            {% if show_exit %}
+                                <td>{{ trade.exitDate ? trade.exitDate|date('d/m/Y H:i') : '-' }}</td>
+                            {% endif %}
+                            <td>
+                                {% for timeframe in trade.timeframes %}
+                                    <span class="badge bg-primary">{{ timeframe }}</span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endfor %}
+                            </td>
+                            <td>{{ trade.tradeType ?? '-' }}</td>
+                            <td>{{ trade.initialRR ?? '-' }}</td>
+                            {% if show_exit %}
+                                <td>
+                                    {% if trade.finalRR is not null %}
+                                        <span class="badge bg-{{ trade.finalRR > 1 ? 'success' : (trade.finalRR >= 0 ? 'warning' : 'danger') }}">
+                                            {{ trade.finalRR }}
+                                        </span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                            <td class="text-end">
+                                <a href="{{ path('app_traders_trade_show', {pseudo: pseudo, tradeId: trade.id}) }}"
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endif %}

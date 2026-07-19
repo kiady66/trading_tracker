@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pseudo }} - Traders - Trading Tracker{% endblock %}
+
+{% block body %}
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-person-circle text-primary"></i> {{ pseudo }}
+                </h1>
+                <a href="{{ path('app_traders_index') }}" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-arrow-left"></i> Tous les traders
+                </a>
+            </div>
+            <p class="text-muted mb-3">Membre depuis {{ owner.createdAt|date('m/Y') }}</p>
+
+            {% if owner.shareCurrentMonthOnly %}
+                <div class="alert alert-info py-2" style="font-size:.9rem;">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    Ce trader partage uniquement son mois en cours.
+                </div>
+            {% endif %}
+
+            {% if available_tabs is empty %}
+                <div class="card">
+                    <div class="card-body text-center py-5 text-muted">
+                        <p class="mb-0">Ce trader ne partage rien pour le moment.</p>
+                    </div>
+                </div>
+            {% else %}
+                <ul class="nav nav-tabs mb-4">
+                    {% if 'stats' in available_tabs %}
+                        <li class="nav-item">
+                            <a class="nav-link {{ tab == 'stats' ? 'active' }}"
+                               href="{{ path('app_traders_profile', {pseudo: pseudo, tab: 'stats'}) }}">
+                                <i class="bi bi-bar-chart me-1"></i>Statistiques
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if 'open' in available_tabs %}
+                        <li class="nav-item">
+                            <a class="nav-link {{ tab == 'open' ? 'active' }}"
+                               href="{{ path('app_traders_profile', {pseudo: pseudo, tab: 'open'}) }}">
+                                <i class="bi bi-hourglass-split me-1"></i>En cours
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if 'closed' in available_tabs %}
+                        <li class="nav-item">
+                            <a class="nav-link {{ tab == 'closed' ? 'active' }}"
+                               href="{{ path('app_traders_profile', {pseudo: pseudo, tab: 'closed'}) }}">
+                                <i class="bi bi-check2-circle me-1"></i>Terminés
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+
+                {% if tab == 'stats' %}
+                    <div class="card">
+                        <div class="card-body text-center py-5 text-muted">
+                            <p class="mb-0">Statistiques bientôt disponibles.</p>
+                        </div>
+                    </div>
+                {% elseif tab == 'open' %}
+                    {% include 'traders/_trade_table.html.twig' with {trades: open_trades, pseudo: pseudo, show_exit: false} %}
+                {% elseif tab == 'closed' %}
+                    {% include 'stats/_filters.html.twig' with {extra_params: {tab: 'closed'}} %}
+                    {% include 'traders/_trade_table.html.twig' with {trades: closed_trades, pseudo: pseudo, show_exit: true} %}
+                    {% if closed_trades|length == 50 %}
+                        <p class="text-muted mt-2" style="font-size:.85rem;">
+                            Les 50 derniers trades sont affichés — utilisez les filtres de dates pour affiner.
+                        </p>
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
