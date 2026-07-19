@@ -1,0 +1,88 @@
+{# Tableau des stats détaillées. Vars : stats, unit ('eur'|'rr'), unit_label #}
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-table"></i> Statistiques Détaillées
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead class="table-dark">
+                <tr>
+                    <th>Métrique</th>
+                    <th>Valeur</th>
+                    <th>Métrique</th>
+                    <th>Valeur</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>Nombre total de trades</td>
+                    <td class="fw-bold">{{ stats.total_trades }}</td>
+                    <td>Gain RR moyen</td>
+                    <td class="fw-bold text-{{ stats.avg_gain_rr >= 0 ? 'success' : 'danger' }}">
+                        {{ stats.avg_gain_rr|default(0)|number_format(2) }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Trades gagnants</td>
+                    <td class="fw-bold text-success">{{ stats.winning_trades }}</td>
+                    <td>Gain RR moyen (wins)</td>
+                    <td class="fw-bold text-success">
+                        {{ stats.avg_win_rr|default(0)|number_format(2) }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Trades perdants</td>
+                    <td class="fw-bold text-danger">{{ stats.losing_trades }}</td>
+                    <td>Perte RR moyenne (losses)</td>
+                    <td class="fw-bold text-danger">
+                        {{ stats.avg_loss_rr|default(0)|number_format(2) }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Gain total ({{ unit_label }})</td>
+                    <td class="fw-bold text-{{ stats.total_gain >= 0 ? 'success' : 'danger' }}">
+                        {{ stats.total_gain|default(0)|number_format(2) }} {{ unit_label }}
+                    </td>
+                    <td>Plus gros gain ({{ unit_label }})</td>
+                    <td class="fw-bold text-success">
+                        {{ stats.max_gain|default(0)|number_format(2) }} {{ unit_label }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Gain moyen par trade ({{ unit_label }})</td>
+                    <td class="fw-bold text-{{ stats.avg_gain|default(0) >= 0 ? 'success' : 'danger' }}">
+                        {{ stats.avg_gain|default(0)|number_format(2) }} {{ unit_label }}
+                    </td>
+                    <td>Plus grosse perte ({{ unit_label }})</td>
+                    <td class="fw-bold text-danger">
+                        {{ stats.min_gain|default(0)|number_format(2) }} {{ unit_label }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Max gains consécutifs</td>
+                    <td class="fw-bold text-success">{{ stats.max_win_streak }}</td>
+                    <td>Max pertes consécutives</td>
+                    <td class="fw-bold text-danger">{{ stats.max_loss_streak }}</td>
+                </tr>
+                <tr>
+                    <td>Série en cours</td>
+                    <td class="fw-bold text-{{ stats.current_streak > 0 ? 'success' : (stats.current_streak < 0 ? 'danger' : 'muted') }}">
+                        {% if stats.current_streak > 0 %}
+                            {{ stats.current_streak }} gain{{ stats.current_streak > 1 ? 's' : '' }}
+                        {% elseif stats.current_streak < 0 %}
+                            {{ -stats.current_streak }} perte{{ stats.current_streak < -1 ? 's' : '' }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>Profit Factor</td>
+                    <td class="fw-bold text-{{ stats.profit_factor is not null and stats.profit_factor < 1 ? 'danger' : 'success' }}">
+                        {{ stats.profit_factor is not null ? stats.profit_factor|number_format(2) : (stats.gross_profit > 0 ? '∞' : '—') }}
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

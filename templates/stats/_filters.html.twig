@@ -1,0 +1,40 @@
+{# Formulaire de filtres période/confluences.
+   Vars : filters, all_confluences, extra_params (hash de champs cachés, optionnel) #}
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="bi bi-funnel"></i> Filtres
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            {% for name, value in extra_params|default({}) %}
+                <input type="hidden" name="{{ name }}" value="{{ value }}">
+            {% endfor %}
+            <div class="col-md-3">
+                <label class="form-label">Date de début</label>
+                <input type="date" name="start_date" class="form-control"
+                       value="{{ filters.start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Date de fin</label>
+                <input type="date" name="end_date" class="form-control"
+                       value="{{ filters.end_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Confluences</label>
+                <select name="confluences[]" multiple>
+                    {% for confluence in all_confluences %}
+                        <option value="{{ confluence.id }}"
+                                {% if confluence.id in filters.confluences|default([]) %}selected{% endif %}>
+                            {{ confluence.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-filter"></i> Appliquer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
