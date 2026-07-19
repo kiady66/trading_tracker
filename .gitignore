@@ -21,3 +21,4 @@
 /assets/vendor/
 ###< symfony/asset-mapper ###
 /snapshots/
+/.env.test
