@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Repository\ConfluenceRepository;
 use App\Repository\TradeRepository;
 use App\Repository\UserRepository;
+use App\Service\StatsProvider;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -76,8 +77,12 @@ class TraderController extends AbstractController
     }
 
     #[Route('/{pseudo}', name: 'profile', methods: ['GET'])]
-    public function profile(string $pseudo, Request $request, ConfluenceRepository $confluenceRepository): Response
-    {
+    public function profile(
+        string $pseudo,
+        Request $request,
+        ConfluenceRepository $confluenceRepository,
+        StatsProvider $statsProvider
+    ): Response {
         $owner = $this->resolveOwner($pseudo);
 
         $availableTabs = [];
@@ -104,8 +109,18 @@ class TraderController extends AbstractController
 
         $openTrades = [];
         $closedTrades = [];
+        $statsView = null;
 
-        if ($tab === 'open') {
+        if ($tab === 'stats') {
+            // Stats publiques : toujours en R, jamais de valeur en euro.
+            // La borne du mois est ajoutée en filtre SQL : forcer un
+            // start_date antérieur dans l'URL ne fait rien fuiter.
+            $statsFilters = $filters + ['user' => $owner];
+            if ($owner->isShareCurrentMonthOnly()) {
+                $statsFilters['month_start'] = (new \DateTimeImmutable('first day of this month'))->setTime(0, 0);
+            }
+            $statsView = $statsProvider->build($statsFilters, StatsProvider::UNIT_RR);
+        } elseif ($tab === 'open') {
             $openTrades = array_map(
                 PublicTradeView::fromTrade(...),
                 $this->tradeRepository->findPublicTrades(
@@ -138,6 +153,7 @@ class TraderController extends AbstractController
             'tab' => $tab,
             'open_trades' => $openTrades,
             'closed_trades' => $closedTrades,
+            'stats_view' => $statsView,
             'filters' => $filters,
             'all_confluences' => $confluenceRepository->findAll(),
         ]);
