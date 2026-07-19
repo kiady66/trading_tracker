@@ -26,6 +26,15 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
+    public function findOneByDisplayNameInsensitive(string $displayName): ?User
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('LOWER(u.displayName) = LOWER(:displayName)')
+            ->setParameter('displayName', $displayName)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return User[]
      */
