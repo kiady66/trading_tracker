@@ -1,0 +1,198 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}News du {{ current_date|date('d/m/Y') }} - Trading Tracker{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* ── CSS de base des wraps news — commun à tous les HTML générés ── */
+        .news-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .news-content section {
+            margin-bottom: 2rem;
+        }
+
+        .news-content h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.4rem;
+            margin: 2rem 0 1rem;
+        }
+
+        .news-content h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin: 0 0 0.6rem;
+        }
+
+        .news-content ul {
+            padding-left: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .news-content li {
+            margin-bottom: 0.35rem;
+        }
+
+        .news-content table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .news-content th {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 600;
+            text-align: left;
+            padding: 0.6rem 0.75rem;
+        }
+
+        .news-content td {
+            padding: 0.55rem 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .news-content tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+
+        .news-content .news-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .news-content .news-callout {
+            background: #fff;
+            border: 1px solid var(--primary);
+            border-left: 5px solid var(--primary);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .news-content .news-callout::before {
+            content: "L'essentiel du jour";
+            display: block;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .news-content .up   { color: #16a34a; font-weight: 600; }
+        .news-content .down { color: #dc2626; font-weight: 600; }
+
+        @media (max-width: 768px) {
+            .news-content table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        /* ── En-tête + sélecteur de date ── */
+        .news-header {
+            max-width: 900px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .news-date-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .news-date-nav .btn-day {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px; height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text-main);
+            text-decoration: none;
+        }
+
+        .news-date-nav .btn-day.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .news-empty {
+            max-width: 900px;
+            margin: 3rem auto;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .news-empty i {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 1rem;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="news-header">
+        <div>
+            <h1 class="h4 mb-1"><i class="bi bi-newspaper me-2"></i>News du {{ current_date|date('d/m/Y') }}</h1>
+            {% if news %}
+                <small class="text-muted">Généré le {{ news.generatedAt|date('d/m/Y à H:i') }}</small>
+            {% endif %}
+        </div>
+
+        <div class="news-date-nav">
+            <a class="btn-day {{ previous_date is null ? 'disabled' }}"
+               href="{{ previous_date ? path('app_news', {date: previous_date|date('Y-m-d')}) : '#' }}"
+               title="Jour précédent">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+
+            <form method="get" action="{{ path('app_news') }}">
+                <input type="date" class="form-control" name="date"
+                       value="{{ current_date|date('Y-m-d') }}"
+                       onchange="this.form.submit()">
+            </form>
+
+            <a class="btn-day {{ next_date is null ? 'disabled' }}"
+               href="{{ next_date ? path('app_news', {date: next_date|date('Y-m-d')}) : '#' }}"
+               title="Jour suivant">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+
+    {% if news %}
+        <div class="news-content">
+            {{ news.contentHtml|raw }}
+        </div>
+    {% else %}
+        <div class="news-empty">
+            <i class="bi bi-newspaper"></i>
+            <p class="mb-1 fw-semibold">Aucune news pour le {{ current_date|date('d/m/Y') }}</p>
+            <p class="mb-0">Lancez <code>symfony console app:news:generate --date={{ current_date|date('Y-m-d') }}</code> pour générer le wrap de cette journée.</p>
+        </div>
+    {% endif %}
+{% endblock %}
