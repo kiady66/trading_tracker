@@ -42,6 +42,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
+    #[ORM\Column(length: 30, unique: true, nullable: true)]
+    private ?string $displayName = null;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $shareEnabled = false;
+
+    #[ORM\Column(options: ['default' => true])]
+    private bool $shareStats = true;
+
+    #[ORM\Column(options: ['default' => true])]
+    private bool $shareOpenTrades = true;
+
+    #[ORM\Column(options: ['default' => true])]
+    private bool $shareClosedTrades = true;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $shareCurrentMonthOnly = false;
+
     public function __construct()
     {
         $this->trades = new ArrayCollection();
@@ -161,6 +179,77 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->plainPassword = $plainPassword;
         return $this;
+    }
+
+    public function getDisplayName(): ?string
+    {
+        return $this->displayName;
+    }
+
+    public function setDisplayName(?string $displayName): self
+    {
+        $this->displayName = $displayName;
+        return $this;
+    }
+
+    public function isShareEnabled(): bool
+    {
+        return $this->shareEnabled;
+    }
+
+    public function setShareEnabled(bool $shareEnabled): self
+    {
+        $this->shareEnabled = $shareEnabled;
+        return $this;
+    }
+
+    public function isShareStats(): bool
+    {
+        return $this->shareStats;
+    }
+
+    public function setShareStats(bool $shareStats): self
+    {
+        $this->shareStats = $shareStats;
+        return $this;
+    }
+
+    public function isShareOpenTrades(): bool
+    {
+        return $this->shareOpenTrades;
+    }
+
+    public function setShareOpenTrades(bool $shareOpenTrades): self
+    {
+        $this->shareOpenTrades = $shareOpenTrades;
+        return $this;
+    }
+
+    public function isShareClosedTrades(): bool
+    {
+        return $this->shareClosedTrades;
+    }
+
+    public function setShareClosedTrades(bool $shareClosedTrades): self
+    {
+        $this->shareClosedTrades = $shareClosedTrades;
+        return $this;
+    }
+
+    public function isShareCurrentMonthOnly(): bool
+    {
+        return $this->shareCurrentMonthOnly;
+    }
+
+    public function setShareCurrentMonthOnly(bool $shareCurrentMonthOnly): self
+    {
+        $this->shareCurrentMonthOnly = $shareCurrentMonthOnly;
+        return $this;
+    }
+
+    public function isProfilePublic(): bool
+    {
+        return $this->shareEnabled && $this->displayName !== null;
     }
 
     public function isPremium(): bool
