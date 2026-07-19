@@ -1,0 +1,82 @@
+{# Calendrier P&L. Vars : calendar_data, unit ('eur'|'rr'), unit_label #}
+{% if calendar_data|length > 0 %}
+    {% set cell_decimals = unit == 'rr' ? 1 : 0 %}
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="bi bi-calendar3"></i> Calendrier P&L</h5>
+            <div class="d-flex align-items-center gap-3">
+                <select id="calendarMonthSelect" class="form-select form-select-sm" style="width: auto;"
+                        onchange="showCalendarMonth(this.value)">
+                    {% for month in calendar_data %}
+                        <option value="{{ loop.index0 }}">{{ month.month_name }}</option>
+                    {% endfor %}
+                </select>
+                {% if unit == 'eur' %}
+                    <i class="fas fa-eye clickable" onclick="toggleBlur('calendarPnl')"
+                       style="cursor: pointer; font-size: 1.2rem;"></i>
+                {% endif %}
+            </div>
+        </div>
+        <div class="{{ unit == 'eur' ? 'blurrable' }}" id="calendarPnl">
+            <div>
+                {% for month in calendar_data %}
+                    <div class="calendar-month {% if not loop.first %}d-none{% endif %}"
+                         data-month-index="{{ loop.index0 }}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">{{ month.label }}</h6>
+                            <span class="fw-bold text-{{ month.total_gain >= 0 ? 'success' : 'danger' }}">
+                                {{ month.total_gain|number_format(2) }} {{ unit_label }}
+                                <small class="text-muted">({{ month.total_count }} trade{{ month.total_count > 1 ? 's' : '' }})</small>
+                            </span>
+                        </div>
+                        <table class="table table-bordered calendar-table mb-0">
+                            <thead class="table-dark">
+                            <tr>
+                                <th>Lun</th>
+                                <th>Mar</th>
+                                <th>Mer</th>
+                                <th>Jeu</th>
+                                <th>Ven</th>
+                                <th class="calendar-week-total">Semaine</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for week in month.weeks %}
+                                <tr>
+                                    {% for cell in week.days %}
+                                        {% if cell is null %}
+                                            <td class="calendar-empty"></td>
+                                        {% elseif cell.data is null %}
+                                            <td>
+                                                <div class="calendar-day-num">{{ cell.day }}</div>
+                                            </td>
+                                        {% else %}
+                                            <td class="bg-{{ cell.data.gain >= 0 ? 'success' : 'danger' }} bg-opacity-25">
+                                                <div class="calendar-day-num">{{ cell.day }}</div>
+                                                <div class="fw-bold text-{{ cell.data.gain >= 0 ? 'success' : 'danger' }}">
+                                                    {{ cell.data.gain|number_format(cell_decimals) }} {{ unit_label }}
+                                                </div>
+                                                <small class="text-muted">{{ cell.data.count }} trade{{ cell.data.count > 1 ? 's' : '' }}</small>
+                                            </td>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <td class="calendar-week-total">
+                                        {% if week.count > 0 %}
+                                            <div class="fw-bold text-{{ week.gain >= 0 ? 'success' : 'danger' }}">
+                                                {{ week.gain|number_format(cell_decimals) }} {{ unit_label }}
+                                            </div>
+                                            {% if unit == 'eur' %}
+                                                <small class="text-muted">{{ week.rr|number_format(1) }} R</small>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endif %}

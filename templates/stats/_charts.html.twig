@@ -1,0 +1,62 @@
+{# Blocs graphiques (les canvases sont remplis par _charts_js). Vars : unit_label #}
+<div class="row mb-4">
+    <!-- Gains Line Chart -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-graph-up"></i> Évolution des Gains ({{ unit_label }})
+            </div>
+            <div class="card-body">
+                <div style="height: 300px;">
+                    <canvas id="gainsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gains RR Bar Chart -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-bar-chart"></i> Gains RR par Trade
+            </div>
+            <div class="card-body">
+                <div style="height: 300px;">
+                    <canvas id="gainRRChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Final RR Bar Chart -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-bar-chart"></i> Final RR par Trade
+            </div>
+            <div class="card-body">
+                <div style="height: 300px;">
+                    <canvas id="finalRRChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Drawdown Chart -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <i class="bi bi-graph-down"></i> Drawdown ({{ unit_label }})
+            </div>
+            <div class="card-body">
+                <div style="height: 300px;">
+                    <canvas id="drawdownChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

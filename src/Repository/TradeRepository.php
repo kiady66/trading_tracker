@@ -55,12 +55,17 @@ class TradeRepository extends ServiceEntityRepository
             'avg_gain_rr' => 0,
             'max_gain_euro' => 0,
             'min_gain_euro' => 0,
+            'max_gain_rr' => 0,
+            'min_gain_rr' => 0,
             'winning_trades' => 0,
             'losing_trades' => 0,
             'win_rate' => 0,
             'gross_profit' => 0,
             'gross_loss' => 0,
             'profit_factor' => null,
+            'gross_profit_rr' => 0,
+            'gross_loss_rr' => 0,
+            'profit_factor_rr' => null,
             'max_drawdown_euro' => 0,
             'max_drawdown_rr' => 0,
             'max_win_streak' => 0,
@@ -97,6 +102,12 @@ class TradeRepository extends ServiceEntityRepository
                 $lossStreak = 0;
             }
 
+            if ($finalRR > 0) {
+                $stats['gross_profit_rr'] += $finalRR;
+            } elseif ($finalRR < 0) {
+                $stats['gross_loss_rr'] += abs($finalRR);
+            }
+
             $stats['max_win_streak'] = max($stats['max_win_streak'], $winStreak);
             $stats['max_loss_streak'] = max($stats['max_loss_streak'], $lossStreak);
 
@@ -115,12 +126,19 @@ class TradeRepository extends ServiceEntityRepository
             if ($gainEuro < $stats['min_gain_euro']) {
                 $stats['min_gain_euro'] = $gainEuro;
             }
+
+            $stats['max_gain_rr'] = max($stats['max_gain_rr'], $finalRR);
+            $stats['min_gain_rr'] = min($stats['min_gain_rr'], $finalRR);
         }
 
         $stats['current_streak'] = $winStreak > 0 ? $winStreak : -$lossStreak;
 
         if ($stats['gross_loss'] > 0) {
             $stats['profit_factor'] = $stats['gross_profit'] / $stats['gross_loss'];
+        }
+
+        if ($stats['gross_loss_rr'] > 0) {
+            $stats['profit_factor_rr'] = $stats['gross_profit_rr'] / $stats['gross_loss_rr'];
         }
 
         // Calcul des moyennes et win rate
@@ -149,8 +167,12 @@ class TradeRepository extends ServiceEntityRepository
         $finalRR = [];
         $gainRR = [];
         $drawdown = [];
+        $cumulativeRRs = [];
+        $drawdownRR = [];
         $cumulative = 0;
         $peak = 0;
+        $cumulativeRR = 0;
+        $peakRR = 0;
 
         // Ajouter un point de départ à 0
         if (count($trades) > 0) {
@@ -165,6 +187,8 @@ class TradeRepository extends ServiceEntityRepository
             $finalRR[] = 0;
             $gainRR[] = 0;
             $drawdown[] = 0;
+            $cumulativeRRs[] = 0;
+            $drawdownRR[] = 0;
         }
 
         foreach ($trades as $trade) {
@@ -183,6 +207,12 @@ class TradeRepository extends ServiceEntityRepository
 
             $peak = max($peak, $cumulative);
             $drawdown[] = $cumulative - $peak;
+
+            $cumulativeRR += $gainRRValue;
+            $cumulativeRRs[] = $cumulativeRR;
+
+            $peakRR = max($peakRR, $cumulativeRR);
+            $drawdownRR[] = $cumulativeRR - $peakRR;
         }
 
         return [
@@ -192,6 +222,8 @@ class TradeRepository extends ServiceEntityRepository
             'final_rr' => $finalRR,
             'gain_rr' => $gainRR,
             'drawdown' => $drawdown,
+            'cumulative_rr' => $cumulativeRRs,
+            'drawdown_rr' => $drawdownRR,
         ];
     }
 

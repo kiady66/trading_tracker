@@ -1,0 +1,196 @@
+{# Scripts des graphiques et helpers de la page stats. Vars : chart_data, unit_label #}
+<script>
+
+    function toggleBlur(elementId) {
+        const element = document.getElementById(elementId);
+        element.classList.toggle('blurred');
+    }
+
+    function showCalendarMonth(index) {
+        document.querySelectorAll('.calendar-month').forEach(function(el) {
+            el.classList.toggle('d-none', el.dataset.monthIndex !== index);
+        });
+    }
+
+    (function tryInitCharts() {
+        if (!document.getElementById('gainsChart')) return;
+
+        if (typeof Chart === 'undefined' || typeof $ === 'undefined') {
+            requestAnimationFrame(tryInitCharts);
+            return;
+        }
+
+        // Détruire les instances Chart.js existantes avant de recréer
+        ['gainRRChart', 'finalRRChart', 'gainsChart', 'drawdownChart'].forEach(function(id) {
+            const existing = Chart.getChart(id);
+            if (existing) existing.destroy();
+        });
+
+        // Initialisation de Select2 en français
+        $('select[name="confluences[]"]').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Sélectionnez les confluences',
+            allowClear: true,
+            width: '100%',
+            language: 'fr',
+            closeOnSelect: false
+        });
+
+        // Gains RR Bar Chart
+        const gainRRCtx = document.getElementById('gainRRChart').getContext('2d');
+        new Chart(gainRRCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ chart_data.dates|json_encode|raw }},
+                datasets: [{
+                    label: 'Gain RR',
+                    data: {{ chart_data.gain_rr|json_encode|raw }},
+                    backgroundColor: function(context) {
+                        const value = context.raw;
+                        return value >= 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)';
+                    },
+                    borderColor: function(context) {
+                        const value = context.raw;
+                        return value >= 0 ? '#28a745' : '#dc3545';
+                    },
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Gain RR'
+                        }
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Final RR Bar Chart
+        const finalRRCtx = document.getElementById('finalRRChart').getContext('2d');
+        new Chart(finalRRCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ chart_data.dates|json_encode|raw }},
+                datasets: [{
+                    label: 'Final RR',
+                    data: {{ chart_data.final_rr|json_encode|raw }},
+                    backgroundColor: function(context) {
+                        const value = context.raw;
+                        return value >= 1 ? 'rgba(40, 167, 69, 0.8)' :
+                            value >= 0 ? 'rgba(255, 193, 7, 0.8)' : 'rgba(220, 53, 69, 0.8)';
+                    },
+                    borderColor: function(context) {
+                        const value = context.raw;
+                        return value >= 1 ? '#28a745' :
+                            value >= 0 ? '#ffc107' : '#dc3545';
+                    },
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Final RR'
+                        }
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Drawdown (underwater) Chart
+        const drawdownCtx = document.getElementById('drawdownChart').getContext('2d');
+        new Chart(drawdownCtx, {
+            type: 'line',
+            data: {
+                labels: {{ chart_data.dates|json_encode|raw }},
+                datasets: [{
+                    label: 'Drawdown ({{ unit_label }})',
+                    data: {{ chart_data.drawdown|json_encode|raw }},
+                    backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                    borderColor: '#dc3545',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        max: 0,
+                        title: {
+                            display: true,
+                            text: 'Drawdown ({{ unit_label }})'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gains Line Chart
+        const gainsCtx = document.getElementById('gainsChart').getContext('2d');
+        new Chart(gainsCtx, {
+            type: 'line',
+            data: {
+                labels: {{ chart_data.dates|json_encode|raw }},
+                datasets: [{
+                    label: 'Gains cumulés ({{ unit_label }})',
+                    data: {{ chart_data.cumulative_gains|json_encode|raw }},
+                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                    borderColor: '#3498db',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Gains ({{ unit_label }})'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+    })();
+</script>

@@ -1,0 +1,46 @@
+{# Stats par confluence. Vars : confluence_stats, unit ('eur'|'rr') #}
+{% if confluence_stats|length > 0 %}
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-lightning-charge"></i> Statistiques par Confluence
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                    <tr>
+                        <th>Confluence</th>
+                        <th>Nombre de trades</th>
+                        <th>Win Rate</th>
+                        {% if unit == 'eur' %}
+                            <th>Gain moyen (€)</th>
+                        {% endif %}
+                        <th>RR moyen</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for confluence, data in confluence_stats %}
+                        <tr>
+                            <td class="fw-bold">{{ confluence }}</td>
+                            <td>{{ data.count }}</td>
+                            <td>
+                                <span class="badge bg-{{ data.win_rate|default(0) >= 50 ? 'success' : 'danger' }}">
+                                    {{ data.win_rate|default(0)|number_format(1) }}%
+                                </span>
+                            </td>
+                            {% if unit == 'eur' %}
+                                <td class="text-{{ data.avg_gain >= 0 ? 'success' : 'danger' }} fw-bold">
+                                    {{ data.avg_gain|number_format(2) }} €
+                                </td>
+                            {% endif %}
+                            <td class="text-{{ data.avg_rr >= 0 ? 'success' : 'danger' }} fw-bold">
+                                {{ data.avg_rr|number_format(2) }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endif %}

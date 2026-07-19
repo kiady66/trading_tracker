@@ -2,8 +2,8 @@
 
 namespace App\Controller;
 
-use App\Repository\TradeRepository;
 use App\Repository\ConfluenceRepository;
+use App\Service\StatsProvider;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +15,7 @@ class StatsController extends AbstractController
     #[Route('/', name: 'app_stats')]
     public function index(
         Request $request,
-        TradeRepository $tradeRepository,
+        StatsProvider $statsProvider,
         ConfluenceRepository $confluenceRepository
     ): Response {
         $filters = [
@@ -24,24 +24,12 @@ class StatsController extends AbstractController
             'confluences' => $request->query->all('confluences'),
         ];
 
-        $statsFilters = $filters + ['user' => $this->getUser()];
+        $unit = StatsProvider::normalizeUnit($request->query->get('unit'));
 
-        $stats = $tradeRepository->getStatistics($statsFilters);
-        $chartData = $tradeRepository->getChartData($statsFilters);
-        $confluenceStats = $tradeRepository->getConfluenceStats($statsFilters);
-        $dayStats = $tradeRepository->getDayStats($statsFilters);
-        $calendarData = $tradeRepository->getCalendarData($statsFilters);
+        $statsView = $statsProvider->build($filters + ['user' => $this->getUser()], $unit);
 
-
-        $allConfluences = $confluenceRepository->findAll();
-
-        return $this->render('stats/index.html.twig', [
-            'stats' => $stats,
-            'chart_data' => $chartData,
-            'confluence_stats' => $confluenceStats,
-            'day_stats' => $dayStats,
-            'calendar_data' => $calendarData,
-            'all_confluences' => $allConfluences,
+        return $this->render('stats/index.html.twig', $statsView + [
+            'all_confluences' => $confluenceRepository->findAll(),
             'filters' => $filters,
         ]);
     }
