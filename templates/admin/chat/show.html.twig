@@ -1,0 +1,45 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Chat — {{ chatUser.email }}{% endblock %}
+
+{% block body %}
+    <div class="d-flex align-items-center mb-3">
+        <a href="{{ path('app_admin_chat_index') }}" class="btn btn-sm btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1 class="h4 mb-0"><i class="bi bi-chat-dots me-2"></i>{{ chatUser.email }}</h1>
+    </div>
+
+    <div class="card mx-auto" style="max-width: 720px;">
+        <div class="card-body d-flex flex-column gap-3" style="max-height: 60vh; overflow-y: auto;" id="admin-chat-thread">
+            {% for message in messages %}
+                <div class="{{ message.fromAdmin ? 'align-self-end text-end' : 'align-self-start' }}" style="max-width: 80%;">
+                    <div class="small text-muted">{{ message.fromAdmin ? 'Support (moi)' : chatUser.email }}</div>
+                    <div class="d-inline-block px-3 py-2 rounded-3 text-start {{ message.fromAdmin ? 'text-bg-primary' : 'bg-light border' }}"
+                         style="white-space: pre-wrap; word-break: break-word;">{{ message.content }}</div>
+                    <div class="small text-muted">{{ message.createdAt|date('d/m H:i') }}</div>
+                </div>
+            {% else %}
+                <p class="text-center text-muted my-4">Aucun message.</p>
+            {% endfor %}
+        </div>
+
+        <div class="card-footer bg-white">
+            <form method="post" action="{{ path('app_admin_chat_reply', {'id': chatUser.id}) }}" class="d-flex gap-2 align-items-end">
+                <input type="hidden" name="_token" value="{{ csrf_token('chat-admin') }}">
+                <textarea name="content" class="form-control" rows="2" maxlength="2000" required
+                          placeholder="Répondre en tant que Support…"></textarea>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-send-fill"></i> Envoyer
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const thread = document.getElementById('admin-chat-thread');
+            if (thread) thread.scrollTop = thread.scrollHeight;
+        })();
+    </script>
+{% endblock %}

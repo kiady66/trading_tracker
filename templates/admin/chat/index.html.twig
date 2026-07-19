@@ -1,0 +1,50 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Chat — Conversations{% endblock %}
+
+{% block body %}
+    <div class="d-flex align-items-center mb-3">
+        <h1 class="h4 mb-0"><i class="bi bi-chat-dots me-2"></i>Conversations</h1>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Utilisateur</th>
+                        <th>Dernier message</th>
+                        <th>Date</th>
+                        <th class="text-end">Non lus</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for conversation in conversations %}
+                    <tr>
+                        <td>
+                            <a href="{{ path('app_admin_chat_show', {'id': conversation.user.id}) }}">
+                                {{ conversation.user.email }}
+                            </a>
+                        </td>
+                        <td class="text-muted">
+                            {% if conversation.lastMessage.fromAdmin %}<i class="bi bi-reply me-1"></i>{% endif %}
+                            {% set excerpt = conversation.lastMessage.content %}
+                            {{ excerpt|length > 60 ? excerpt|slice(0, 60) ~ '…' : excerpt }}
+                        </td>
+                        <td class="text-muted">{{ conversation.lastMessage.createdAt|date('d/m/Y H:i') }}</td>
+                        <td class="text-end">
+                            {% if conversation.unreadCount > 0 %}
+                                <span class="badge bg-danger rounded-pill">{{ conversation.unreadCount }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">Aucune conversation pour le moment.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
