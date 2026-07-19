@@ -24,11 +24,13 @@ class StatsController extends AbstractController
             'confluences' => $request->query->all('confluences'),
         ];
 
-        $stats = $tradeRepository->getStatistics($filters);
-        $chartData = $tradeRepository->getChartData($filters);
-        $confluenceStats = $tradeRepository->getConfluenceStats($filters);
-        $dayStats = $tradeRepository->getDayStats($filters);
-        $calendarData = $tradeRepository->getCalendarData($filters);
+        $statsFilters = $filters + ['user' => $this->getUser()];
+
+        $stats = $tradeRepository->getStatistics($statsFilters);
+        $chartData = $tradeRepository->getChartData($statsFilters);
+        $confluenceStats = $tradeRepository->getConfluenceStats($statsFilters);
+        $dayStats = $tradeRepository->getDayStats($statsFilters);
+        $calendarData = $tradeRepository->getCalendarData($statsFilters);
 
 
         $allConfluences = $confluenceRepository->findAll();
