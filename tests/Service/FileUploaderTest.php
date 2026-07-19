@@ -3,30 +3,27 @@
 namespace App\Tests\Service;
 
 use App\Service\FileUploader;
+use League\Flysystem\FilesystemOperator;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 class FileUploaderTest extends TestCase
 {
-    private string $targetDirectory;
+    private FilesystemOperator&MockObject $storage;
     private SluggerInterface $slugger;
     private FileUploader $fileUploader;
 
     protected function setUp(): void
     {
-        $this->targetDirectory = '/tmp/uploads';
+        $this->storage = $this->createMock(FilesystemOperator::class);
         $this->slugger = $this->createMock(SluggerInterface::class);
         $this->fileUploader = new FileUploader(
-            $this->targetDirectory,
+            $this->storage,
             $this->slugger,
             100,
             80
         );
-    }
-
-    public function testGetTargetDirectory(): void
-    {
-        $this->assertSame($this->targetDirectory, $this->fileUploader->getTargetDirectory());
     }
 
     public function testGetMaxFileSizeKB(): void
@@ -41,7 +38,7 @@ class FileUploaderTest extends TestCase
 
     public function testConstructorWithDefaultParameters(): void
     {
-        $uploader = new FileUploader($this->targetDirectory, $this->slugger);
+        $uploader = new FileUploader($this->storage, $this->slugger);
 
         $this->assertSame(100, $uploader->getMaxFileSizeKB());
         $this->assertSame(80, $uploader->getCompressionQuality());
@@ -49,10 +46,26 @@ class FileUploaderTest extends TestCase
 
     public function testConstructorWithCustomParameters(): void
     {
-        $uploader = new FileUploader($this->targetDirectory, $this->slugger, 200, 90);
+        $uploader = new FileUploader($this->storage, $this->slugger, 200, 90);
 
         $this->assertSame(200, $uploader->getMaxFileSizeKB());
         $this->assertSame(90, $uploader->getCompressionQuality());
+    }
+
+    public function testRemoveDeletesExistingFile(): void
+    {
+        $this->storage->method('fileExists')->with('screenshot.jpg')->willReturn(true);
+        $this->storage->expects($this->once())->method('delete')->with('screenshot.jpg');
+
+        $this->fileUploader->remove('screenshot.jpg');
+    }
+
+    public function testRemoveIgnoresMissingFile(): void
+    {
+        $this->storage->method('fileExists')->with('screenshot.jpg')->willReturn(false);
+        $this->storage->expects($this->never())->method('delete');
+
+        $this->fileUploader->remove('screenshot.jpg');
     }
 
     public function testCompressImageToMaxSizeWithNonExistentFile(): void
