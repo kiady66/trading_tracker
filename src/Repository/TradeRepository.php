@@ -268,11 +268,62 @@ class TradeRepository extends ServiceEntityRepository
         return $confluenceStats;
     }
 
+    /**
+     * Trades visibles publiquement pour un profil partagé.
+     *
+     * - $statuses : sous-ensemble de ['open', 'closed'] selon les toggles du
+     *   propriétaire — les trades "watching" ne sont jamais exposés ;
+     * - $currentMonthOnly : borne les trades terminés sur exitDate >= 1er du
+     *   mois courant ; les trades ouverts restent visibles quel que soit leur
+     *   mois d'entrée ;
+     * - $filters : filtres visiteur (start_date/end_date/confluences), à
+     *   écrêter côté contrôleur avant l'appel. Les bornes de dates portent
+     *   sur exitDate : ne pas en passer pour lister les trades ouverts.
+     *
+     * @return Trade[]
+     */
+    public function findPublicTrades($owner, array $statuses, bool $currentMonthOnly, array $filters = [], ?int $limit = null): array
+    {
+        $statuses = array_values(array_intersect($statuses, ['open', 'closed']));
+
+        if ($statuses === []) {
+            return [];
+        }
+
+        $qb = $this->createQueryBuilder('t')
+            ->andWhere('t.user = :owner')
+            ->setParameter('owner', $owner)
+            ->andWhere('t.status IN (:statuses)')
+            ->setParameter('statuses', $statuses);
+
+        if ($currentMonthOnly) {
+            $monthStart = (new \DateTimeImmutable('first day of this month'))->setTime(0, 0);
+            $qb->andWhere("t.status = 'open' OR (t.status = 'closed' AND t.exitDate >= :monthStart)")
+                ->setParameter('monthStart', $monthStart);
+        }
+
+        $this->applyFilters($qb, $filters);
+
+        $qb->addSelect('COALESCE(t.exitDate, t.entryDate) AS HIDDEN sortDate')
+            ->orderBy('sortDate', 'DESC');
+
+        if ($limit !== null) {
+            $qb->setMaxResults($limit);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
     private function applyFilters(QueryBuilder $qb, array $filters): void
     {
         if (!empty($filters['user'])) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $filters['user']);
+        }
+
+        if (!empty($filters['month_start'])) {
+            $qb->andWhere('t.exitDate >= :month_start')
+                ->setParameter('month_start', $filters['month_start']);
         }
 
         if (!empty($filters['start_date'])) {
