@@ -29,3 +29,18 @@ services:
     App\Service\FileUploader:
         arguments:
             $screenshotsStorage: '@screenshots.storage'
+
+    App\Security\Firebase\FirebaseAuthFactory:
+        arguments:
+            $credentials: '%env(FIREBASE_CREDENTIALS)%'
+            $verifierCache: '@cache.app'
+
+    # Le service Auth de kreait est construit paresseusement : sans cela, une
+    # configuration Firebase absente ferait échouer le conteneur au démarrage,
+    # y compris sur les pages qui n'ont rien à voir avec l'authentification.
+    Kreait\Firebase\Contract\Auth:
+        factory: ['@App\Security\Firebase\FirebaseAuthFactory', 'create']
+        lazy: true
+
+    App\Security\Firebase\FirebaseTokenVerifier:
+        alias: App\Security\Firebase\KreaitFirebaseTokenVerifier
