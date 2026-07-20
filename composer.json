@@ -14,6 +14,7 @@
         "doctrine/doctrine-bundle": "^2.16",
         "doctrine/doctrine-migrations-bundle": "^3.4",
         "doctrine/orm": "^3.5",
+        "kreait/firebase-php": "^8.3",
         "league/flysystem-async-aws-s3": "^3.31",
         "league/flysystem-bundle": "^3.7",
         "phpdocumentor/reflection-docblock": "^5.6",

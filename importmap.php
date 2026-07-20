@@ -50,4 +50,28 @@ return [
         'version' => '2.4.3',
         'type' => 'css',
     ],
+    'firebase/app' => [
+        'version' => '12.16.0',
+    ],
+    'firebase/auth' => [
+        'version' => '12.16.0',
+    ],
+    '@firebase/app' => [
+        'version' => '0.15.1',
+    ],
+    '@firebase/auth' => [
+        'version' => '1.13.3',
+    ],
+    '@firebase/component' => [
+        'version' => '0.7.3',
+    ],
+    '@firebase/logger' => [
+        'version' => '0.5.1',
+    ],
+    '@firebase/util' => [
+        'version' => '1.15.1',
+    ],
+    'idb' => [
+        'version' => '7.1.1',
+    ],
 ];
