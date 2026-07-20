@@ -22,3 +22,6 @@
 ###< symfony/asset-mapper ###
 /snapshots/
 /.env.test
+
+# Clés de service Firebase — ne doivent jamais être versionnées
+*firebase*.json
