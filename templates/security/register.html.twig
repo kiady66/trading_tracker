@@ -9,6 +9,8 @@
                 <div class="card-body">
                     <h1 class="h3 mb-4 text-center">Inscription</h1>
 
+                    {{ include('security/_google_button.html.twig') }}
+
                     {{ form_start(registrationForm) }}
                     <div class="mb-3">
                         {{ form_label(registrationForm.email, 'Email', {'label_attr': {'class': 'form-label'}}) }}

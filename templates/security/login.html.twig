@@ -13,6 +13,8 @@
                         <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
                     {% endif %}
 
+                    {{ include('security/_google_button.html.twig') }}
+
                     <form method="post">
                         <div class="mb-3">
                             <label for="inputEmail" class="form-label">Email</label>
