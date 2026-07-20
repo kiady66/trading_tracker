@@ -37,7 +37,9 @@ class CommunityVisibilityTest extends WebTestCase
         $user = new User();
         $user->setEmail($email);
         $user->setPassword('irrelevant-for-loginUser');
-        $user->setDisplayName($pseudo);
+        // Le pseudo est obligatoire depuis l'onboarding : un utilisateur sans
+        // pseudo serait redirigé vers /onboarding sur toutes les pages.
+        $user->setDisplayName($pseudo ?? $this->pseudoFromEmail($email));
         $user->setShareEnabled($shareEnabled);
         $user->setShareStats($shareStats);
         $user->setShareOpenTrades($shareOpenTrades);
@@ -48,6 +50,11 @@ class CommunityVisibilityTest extends WebTestCase
         $this->em->flush();
 
         return $user;
+    }
+
+    private function pseudoFromEmail(string $email): string
+    {
+        return preg_replace('/[^a-zA-Z0-9_-]/', '', strstr($email, '@', true));
     }
 
     private function createTrade(
@@ -242,42 +249,10 @@ class CommunityVisibilityTest extends WebTestCase
         }
     }
 
-    public function testDisplayNameIsRequiredToEnableSharing(): void
-    {
-        $user = $this->createUser('new@test.com');
-        $this->loginAs($user);
-
-        $crawler = $this->client->request('GET', '/profile');
-        $form = $crawler->selectButton('Enregistrer')->form();
-        $form['profile_visibility[shareEnabled]']->tick();
-        $this->client->submit($form);
-
-        $this->assertStringContainsString(
-            'Un pseudo est requis',
-            $this->client->getResponse()->getContent()
-        );
-
-        $this->em->clear();
-        $reloaded = static::getContainer()->get(UserRepository::class)->find($user->getId());
-        $this->assertFalse($reloaded->isShareEnabled());
-    }
-
-    public function testDisplayNameUniquenessIsCaseInsensitive(): void
-    {
-        $this->createUser('alice@test.com', 'alice', shareEnabled: true);
-        $user = $this->createUser('bob@test.com');
-        $this->loginAs($user);
-
-        $crawler = $this->client->request('GET', '/profile');
-        $form = $crawler->selectButton('Enregistrer')->form();
-        $form['profile_visibility[displayName]'] = 'ALICE';
-        $this->client->submit($form);
-        $this->assertResponseRedirects('/profile');
-
-        $this->em->clear();
-        $reloaded = static::getContainer()->get(UserRepository::class)->find($user->getId());
-        $this->assertNull($reloaded->getDisplayName());
-    }
+    // Les tests « pseudo requis pour activer le partage » et « unicité insensible
+    // à la casse depuis /profile » ont été retirés : le pseudo est désormais collecté
+    // à l'onboarding et obligatoire pour tous, un compte sans pseudo ne peut plus
+    // atteindre /profile. Ces deux comportements sont couverts par OnboardingControllerTest.
 
     public function testDisplayNameIsImmutableOnceSet(): void
     {

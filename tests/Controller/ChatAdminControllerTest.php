@@ -27,6 +27,8 @@ class ChatAdminControllerTest extends WebTestCase
         $user->setEmail($email);
         $user->setPassword('irrelevant-for-loginUser');
         $user->setRoles($roles);
+        // Obligatoire depuis l'onboarding, sinon toute page redirige vers /onboarding.
+        $user->setDisplayName(preg_replace('/[^a-zA-Z0-9_-]/', '', strstr($user->getEmail(), '@', true)));
 
         $this->em->persist($user);
         $this->em->flush();

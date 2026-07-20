@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Choisir votre pseudo - Trading Tracker{% endblock %}
+
+{% block body %}
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h1 class="h3 mb-3 text-center">Bienvenue !</h1>
+
+                    <p class="text-muted text-center">
+                        Une dernière étape : choisissez le pseudo sous lequel les autres traders
+                        vous verront.
+                    </p>
+
+                    <div class="alert alert-warning">
+                        Ce choix est <strong>définitif</strong> : le pseudo sert d'adresse à votre
+                        profil public et ne pourra plus être modifié.
+                    </div>
+
+                    {{ form_start(form) }}
+                        {{ form_row(form.displayName) }}
+                        <button type="submit" class="btn btn-primary w-100">Continuer</button>
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
