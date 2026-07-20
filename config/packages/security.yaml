@@ -27,6 +27,11 @@ security:
             lazy: true
             provider: app_user_provider
 
+            # Connexion via Firebase (Google). Cohabite avec le formulaire pendant
+            # la phase de migration ; le formulaire disparaîtra ensuite.
+            custom_authenticators:
+                - App\Security\FirebaseAuthenticator
+
             # Configuration de l'authentification par formulaire
             form_login:
                 login_path: app_login
@@ -60,6 +65,7 @@ security:
     access_control:
         - { path: ^/login$, roles: PUBLIC_ACCESS }
         - { path: ^/register$, roles: PUBLIC_ACCESS }
+        - { path: ^/auth/firebase$, roles: PUBLIC_ACCESS }
         - { path: ^/$, roles: PUBLIC_ACCESS } # Page d'accueil publique
         - { path: ^/, roles: ROLE_USER }
 
