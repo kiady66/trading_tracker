@@ -28,10 +28,13 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private array $roles = [];
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?string $password = null;
 
     private ?string $plainPassword = null;
+
+    #[ORM\Column(length: 128, unique: true, nullable: true)]
+    private ?string $firebaseUid = null;
 
     #[ORM\OneToMany(targetEntity: Trade::class, mappedBy: 'user')]
     private Collection $trades;
@@ -102,15 +105,31 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getPassword(): string
+    public function getPassword(): ?string
     {
         return $this->password;
     }
 
-    public function setPassword(string $password): self
+    public function setPassword(?string $password): self
     {
         $this->password = $password;
         return $this;
+    }
+
+    public function getFirebaseUid(): ?string
+    {
+        return $this->firebaseUid;
+    }
+
+    public function setFirebaseUid(?string $firebaseUid): self
+    {
+        $this->firebaseUid = $firebaseUid;
+        return $this;
+    }
+
+    public function isFirebaseAccount(): bool
+    {
+        return $this->firebaseUid !== null;
     }
 
     public function eraseCredentials(): void
