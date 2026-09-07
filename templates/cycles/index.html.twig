@@ -1,0 +1,206 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Cycles des taux - Trading Tracker{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .cycles-wrap {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        .cycles-header {
+            margin-bottom: 1.5rem;
+            max-width: 60ch;
+        }
+
+        .cycles-header p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .cycles-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 3rem;
+            /* Le cadran est plus haut que le tableau : on centre les deux
+               colonnes verticalement l'une par rapport à l'autre */
+            align-items: center;
+        }
+
+        @media (max-width: 900px) {
+            .cycles-layout { grid-template-columns: 1fr; gap: 2rem; }
+        }
+
+        /* ── Cadran ── */
+        .cycles-dial svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            touch-action: none;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .cycles-dial .ring { fill: none; stroke: var(--primary); stroke-width: 1.5; opacity: 0.55; }
+        .cycles-dial .spoke { stroke: var(--border); stroke-width: 1; opacity: 0.6; }
+        .cycles-dial .zone { font-size: 13px; fill: var(--text-muted); }
+
+        .cycles-dial .pill { cursor: grab; }
+        .cycles-dial .pill:active { cursor: grabbing; }
+        .cycles-dial .pill rect { stroke-width: 1.25; transition: filter .12s; }
+        .cycles-dial .pill:focus-visible { outline: none; }
+        .cycles-dial .pill:focus-visible rect { stroke-width: 2.5; }
+        .cycles-dial .pill text { font-size: 13px; font-weight: 500; pointer-events: none; }
+        .cycles-dial .pill.dragging rect { filter: brightness(.96); }
+
+        .cycles-dial .up rect   { fill: #ecebfa; stroke: #413ac0; }
+        .cycles-dial .up text   { fill: #413ac0; }
+        .cycles-dial .down rect { fill: #e6f2f0; stroke: #0f6b64; }
+        .cycles-dial .down text { fill: #0f6b64; }
+        .cycles-dial .flat rect { fill: #f0f1f3; stroke: #6d7178; }
+        .cycles-dial .flat text { fill: #6d7178; }
+        .cycles-dial .retrac rect { stroke-dasharray: 3 2.5; }
+
+        .cycles-hint {
+            margin-top: 1.25rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            max-width: 52ch;
+        }
+
+        /* ── Tableau ── */
+        .cycles-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .cycles-table th {
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            padding: 0 8px 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cycles-table th:first-child,
+        .cycles-table td:first-child { padding-left: 0; }
+
+        .cycles-table td {
+            padding: 9px 8px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .cycles-table tr:hover td { background: #f5f6f8; }
+
+        .cycles-table .tick { font-weight: 600; font-size: 0.9rem; }
+        .cycles-table .ph { font-size: 0.85rem; color: var(--text-muted); }
+
+        .cycles-table input[type=text] {
+            width: 100px;
+            font: inherit;
+            font-size: 0.85rem;
+            padding: 4px 7px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: #fff;
+            color: inherit;
+        }
+
+        .cycles-table select {
+            font: inherit;
+            font-size: 0.85rem;
+            padding: 4px 6px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: #fff;
+            color: inherit;
+        }
+
+        .cycles-table input:focus-visible,
+        .cycles-table select:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 1px;
+        }
+
+        .cycles-table input[type=checkbox] {
+            accent-color: var(--primary);
+            width: 15px;
+            height: 15px;
+        }
+
+        /* ── Enregistrement ── */
+        .cycles-actions {
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .cycles-status { font-size: 0.85rem; }
+        .cycles-status.muted   { color: var(--text-muted); }
+        .cycles-status.success { color: #16a34a; }
+        .cycles-status.error   { color: #dc2626; }
+
+        .cycles-empty {
+            margin: 3rem auto;
+            text-align: center;
+            color: var(--text-muted);
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="cycles-wrap"
+         data-controller="cycles-clock"
+         data-cycles-clock-banks-value="{{ banks|json_encode|e('html_attr') }}"
+         data-cycles-clock-save-url-value="{{ path('app_cycles_save') }}"
+         data-cycles-clock-csrf-value="{{ csrf_token }}">
+
+        <div class="cycles-header">
+            <h1 class="h4 mb-1"><i class="bi bi-clock-history me-2"></i>Horloge des cycles de taux</h1>
+            <p>Fais glisser une banque autour du cadran pour la repositionner. La phase se déduit du quadrant où elle atterrit. Enregistre quand la disposition te convient.</p>
+        </div>
+
+        {% if banks is empty %}
+            <div class="cycles-empty">
+                <p class="mb-1 fw-semibold">Aucune banque centrale en base</p>
+                <p class="mb-0">Lancez <code>symfony console doctrine:fixtures:load --append</code> pour injecter les données initiales.</p>
+            </div>
+        {% else %}
+            <div class="cycles-layout">
+                <div class="cycles-dial">
+                    {# viewBox recadré (contenu utile : cercle + pilules + rayons), sinon les
+                       marges internes du SVG font descendre le cadran sous le tableau #}
+                    <svg data-cycles-clock-target="dial" viewBox="60 60 500 500" role="application"
+                         aria-label="Cadran des cycles de taux, banques déplaçables"></svg>
+                </div>
+
+                <div class="cycles-table">
+                    <table>
+                        <thead>
+                            <tr><th>Banque</th><th>Taux</th><th>Phase</th><th>Biais</th><th>Retrac.</th></tr>
+                        </thead>
+                        <tbody data-cycles-clock-target="ledger"
+                               data-action="input->cycles-clock#ledgerInput"></tbody>
+                    </table>
+
+                    <div class="cycles-actions">
+                        <button type="button" class="btn btn-primary"
+                                data-cycles-clock-target="saveButton"
+                                data-action="cycles-clock#save">
+                            <i class="bi bi-save me-1"></i> Enregistrer
+                        </button>
+                        <span class="cycles-status muted" data-cycles-clock-target="status" role="status"></span>
+                    </div>
+                </div>
+            </div>
+
+            <p class="cycles-hint">Au clavier : tabule jusqu'à une banque, puis flèches gauche et droite pour la déplacer de 2°, avec Maj pour 10°.</p>
+        {% endif %}
+    </div>
+{% endblock %}
