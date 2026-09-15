@@ -7,6 +7,8 @@
 > conteneur `app` + migrations + **`cache:clear` obligatoire** + healthcheck,
 > voir [Déployer](#déployer-un-changement)). Les secrets sont dans
 > `/root/workspace_dar/trading-tracker/.env` sur le droplet (jamais commité).
+> Un cron (23h59 Europe/Paris) génère le wrap news quotidien via `claude -p`
+> dans le conteneur app — voir [News quotidiennes](#news-quotidiennes-cron).
 
 ## Vue d'ensemble
 
@@ -186,23 +188,59 @@ build ; à l'exécution, `env_file` écrase tout avec les vraies valeurs.
 La commande `app:news:generate` (voir
 [GenerateDailyNewsCommand](../src/Command/GenerateDailyNewsCommand.php)) génère
 le wrap de news du jour en lançant `claude -p` avec recherche web, puis
-l'enregistre dans l'entité `DailyNews` (page `/news`).
+l'enregistre dans l'entité `DailyNews` (page `/news`). **En place et actif
+depuis le 15/09/2026.**
+
+```mermaid
+sequenceDiagram
+    participant CRON as cron (hôte, root)
+    participant APP as conteneur app
+    participant CC as claude -p (dans le conteneur)
+    participant WEB as Web (recherche)
+    participant DB as PostgreSQL
+
+    Note over CRON: 23h59 Europe/Paris, tous les jours
+    CRON->>APP: docker compose exec -T app<br/>php bin/console app:news:generate
+    APP->>CC: Process claude -p PROMPT<br/>--allowedTools WebSearch,WebFetch
+    CC->>WEB: recherche des news du jour<br/>(forexlive, investinglive, Reuters...)
+    CC-->>APP: fragment HTML (timeout 15 min)
+    APP->>APP: cleanOutput (fences, texte hors HTML)
+    APP->>DB: upsert DailyNews (date du jour)
+```
+
+Les briques :
 
 - **Claude Code est installé dans l'image Docker** (voir
   [Dockerfile](../Dockerfile)) : `nodejs` + `@anthropic-ai/claude-code`, avec le
   `ripgrep` système (`USE_BUILTIN_RIPGREP=0`, le binaire embarqué est glibc et
-  l'image est musl/Alpine).
-- **Auth headless** : `CLAUDE_CODE_OAUTH_TOKEN` dans le `.env` du droplet. Le
-  token se génère une fois, en interactif, avec `claude setup-token` (sur
-  n'importe quelle machine) — jamais commité.
-- **Cron (sur l'hôte du droplet)**, tous les soirs à 23h59 :
+  l'image est musl/Alpine). Conséquence : le build de l'image est plus long
+  (installation de Node sur 1 vCPU) — choix assumé, ~1 build/semaine.
+- **Auth headless** : `CLAUDE_CODE_OAUTH_TOKEN` dans le `.env` du droplet
+  (chargé dans le conteneur via `env_file`). Le token se génère une fois, en
+  interactif, avec `claude setup-token` (sur n'importe quelle machine) — jamais
+  commité. ⚠ Après avoir ajouté/changé le token dans `.env`, recréer le
+  conteneur (`docker compose -f compose.prod.yaml up -d app`) : `exec` utilise
+  l'environnement figé à la création du conteneur.
+- **Timezone** : le droplet est en **Europe/Paris** (`timedatectl
+  set-timezone`, fait le 15/09/2026) pour que le cron parte bien à 23h59 heure
+  française et que la date du wrap soit le jour français.
+- **Cron** installé dans la crontab de root sur l'hôte (`crontab -l` pour
+  vérifier, `crontab -e` pour modifier) :
 
 ```cron
 59 23 * * * cd /root/workspace_dar/trading-tracker && docker compose -f compose.prod.yaml exec -T app php bin/console app:news:generate >> /var/log/news-cron.log 2>&1
 ```
 
-La génération prend plusieurs minutes (recherche web + rédaction, timeout
-15 min dans la commande). Test manuel : `make prod-console CMD="app:news:generate"`.
+Opérations courantes :
+
+| Besoin | Commande |
+|---|---|
+| Générer/regénérer un jour précis | `make prod-console CMD="app:news:generate --date=2026-09-14"` (idempotent : remplace le wrap existant) |
+| Vérifier la dernière exécution du cron | `ssh droplet 'tail -50 /var/log/news-cron.log'` |
+| Tester la chaîne manuellement | `make prod-console CMD="app:news:generate"` |
+
+La génération prend plusieurs minutes par jour (recherche web + rédaction,
+timeout 15 min dans la commande) — normal, ne pas s'inquiéter du délai.
 
 ## Données
 
@@ -234,3 +272,6 @@ La génération prend plusieurs minutes (recherche web + rédaction, timeout
 | Certificat expiré | Timer certbot ou hook en panne | `certbot renew --dry-run`, vérifier le hook `reload-nginx.sh` |
 | 502 sur le site | conteneur app down | `docker compose -f compose.prod.yaml ps` puis `logs app` |
 | Login Google ne marche pas en prod | `FIREBASE_*` vides — état normal actuel | renseigner les variables dans le `.env` du droplet |
+| Pas de wrap news ce matin sur `/news` | cron en échec cette nuit | `tail /var/log/news-cron.log` ; regénérer : `make prod-console CMD="app:news:generate --date=YYYY-MM-DD"` |
+| `Binaire "claude" introuvable` | image buildée avant le 15/09/2026 | `make deploy` (rebuild) |
+| `claude -p` échoue en auth | `CLAUDE_CODE_OAUTH_TOKEN` absent/révoqué, ou conteneur pas recréé après ajout | vérifier le `.env`, régénérer via `claude setup-token`, puis `up -d app` |

@@ -54,6 +54,10 @@ make deploy
 
 # Other prod targets: prod-check, prod-cache-clear, prod-migrate, prod-logs,
 # prod-ps, prod-shell, prod-console CMD="...", prod-nginx-reload, prod-snapshot
+
+# Regenerate a daily news wrap in prod (normally done by a 23:59 cron on the
+# droplet — claude -p runs INSIDE the app container, see docs/PRODUCTION.md)
+make prod-console CMD="app:news:generate --date=2026-09-14"
 ```
 
 Production procedure details (and the cache:clear trap): see
