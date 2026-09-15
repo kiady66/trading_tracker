@@ -1,0 +1,198 @@
+# Production — Runbook
+
+> **TL;DR pour une IA** : la prod tourne sur un droplet DigitalOcean derrière
+> **https://trading-tracker.freeddns.org** (SSL Let's Encrypt actif, renouvellement
+> automatique). Accès : `ssh droplet` depuis la machine de dev. Pour déployer un
+> changement de code : `git pull` + rebuild du conteneur `app` + **`cache:clear`
+> obligatoire** (voir [Déployer](#déployer-un-changement)). Les secrets sont dans
+> `/root/workspace_dar/trading-tracker/.env` sur le droplet (jamais commité).
+
+## Vue d'ensemble
+
+```mermaid
+flowchart LR
+    subgraph Internet
+        B[Navigateur]
+        DNS["Dynu DNS<br/>trading-tracker.freeddns.org"]
+        R2[("Cloudflare R2<br/>bucket trading-tracker-screenshot<br/>servi via *.r2.dev")]
+        LE[Let's Encrypt]
+    end
+
+    subgraph Droplet["Droplet DigitalOcean (134.209.226.113, fra1)"]
+        UFW["UFW : 22, 80, 443"]
+        subgraph Compose["docker compose -f compose.prod.yaml"]
+            NGINX["nginx:alpine<br/>:80 → 301 https<br/>:443 ssl"]
+            APP["app (php-fpm)<br/>build ./Dockerfile"]
+            DB[("postgres:16-alpine<br/>db trading_data")]
+        end
+        CERT["/etc/letsencrypt<br/>(certbot sur l'hôte)"]
+    end
+
+    B -- "résolution" --> DNS
+    B -- "HTTPS" --> UFW --> NGINX
+    NGINX -- "fastcgi :9000" --> APP
+    APP -- "DATABASE_URL" --> DB
+    APP -- "upload screenshots<br/>(Flysystem/S3)" --> R2
+    B -- "img src SCREENSHOTS_BASE_URL" --> R2
+    LE -- "renouvellement auto<br/>(webroot ./public)" --> CERT
+    CERT -. "monté ro dans nginx" .-> NGINX
+```
+
+## Environnements
+
+| | Prod (droplet) | Dev local (MacBook) | Mac mini (ancien) |
+|---|---|---|---|
+| URL | https://trading-tracker.freeddns.org | http://localhost:8001 (`make run`) | http://192.168.1.53 (LAN uniquement) |
+| Statut | **Prod principale** | Développement | Obsolète, remplacé par le droplet |
+| Accès shell | `ssh droplet` | — | `ssh macmini` |
+| Base | postgres:16-alpine (conteneur) | PostgreSQL local (`trading_data`) | postgres:16-alpine (conteneur) |
+| Données | Copie des données réelles (15/09/2026) | **Données réelles** (voir avertissement fixtures) | Copie des données réelles (15/09/2026) |
+
+Le déploiement Mac mini (Colima, ACLs Tailscale bloquantes, port 80 non ouvert) a
+été abandonné au profit du droplet ; le plan historique reste dans
+[plans/macmini-deployment.md](plans/macmini-deployment.md).
+
+## Le droplet
+
+- Ubuntu 24.04, 1 vCPU / 1 Go RAM / 24 Go disque, région `fra1`
+- **Swap 2 Go** (persisté dans `/etc/fstab`, `vm.swappiness=10`) — indispensable :
+  sans swap, `docker build` est tué par l'OOM killer avec 1 Go de RAM
+- Docker 29 + Compose v2 installés via apt (`docker.io`, `docker-compose-v2`),
+  service activé au boot ; conteneurs en `restart: unless-stopped`
+- UFW actif : uniquement OpenSSH, 80/tcp, 443/tcp
+- Repo : `/root/workspace_dar/trading-tracker` (clone HTTPS du repo public)
+
+## Domaine et SSL
+
+- Domaine gratuit **Dynu** : `trading-tracker.freeddns.org` → `134.209.226.113`.
+  L'IP du droplet est fixe, donc **pas de client DDNS ni de cron de mise à jour**
+  (contrairement à ce que prévoyait le plan Mac mini).
+- Certificat Let's Encrypt obtenu par `certbot certonly --webroot -w .../public`
+  (le challenge ACME passe par nginx qui sert déjà `./public`, aucune coupure).
+- Renouvellement automatique : timer systemd `certbot.timer` + hook
+  `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh` qui exécute
+  `docker exec trading-tracker-nginx-1 nginx -s reload`. Dry-run validé.
+- nginx ([docker/nginx/default.conf](../docker/nginx/default.conf)) : port 80 =
+  redirection 301 vers HTTPS **sauf** `/.well-known/acme-challenge/` (nécessaire
+  aux renouvellements) ; port 443 = ssl + fastcgi vers `app:9000`.
+
+## Stack Docker (compose.prod.yaml)
+
+```mermaid
+flowchart TB
+    subgraph Host["Hôte (droplet)"]
+        REPO["/root/workspace_dar/trading-tracker<br/>(clone git + .env chmod 600)"]
+        PUB["./public (répertoire du repo)"]
+        LETS["/etc/letsencrypt"]
+    end
+    subgraph Volumes["Volumes nommés"]
+        VAR[("app_var → /var/www/html/var<br/>⚠ cache Symfony persistant")]
+        DATA[("database_data → données Postgres")]
+    end
+    APP["app<br/>build Dockerfile, env_file .env"]
+    NGINX["nginx:alpine"]
+    DB["database (postgres:16-alpine)"]
+
+    PUB -- "rw (assets compilés écrits ici<br/>par l'entrypoint)" --> APP
+    PUB -- "ro (fichiers statiques)" --> NGINX
+    LETS -- "ro (certificats)" --> NGINX
+    VAR --- APP
+    DATA --- DB
+    APP -- "depends_on healthy" --> DB
+```
+
+Points clés :
+
+- Le code applicatif est **copié dans l'image** au build (voir
+  [Dockerfile](../Dockerfile)) — un `git pull` sur l'hôte ne suffit **pas** à
+  mettre à jour l'app qui tourne, il faut rebuilder.
+- Exception : `./public` est un bind mount partagé — l'entrypoint du conteneur
+  app ([docker/entrypoint.sh](../docker/entrypoint.sh)) exécute `cache:warmup`,
+  `assets:install` et `asset-map:compile`, ce qui écrit les assets compilés dans
+  le `public/` de l'hôte, où nginx les sert directement.
+- `var/` vit dans le volume nommé `app_var` : **le cache Twig compilé survit aux
+  rebuilds**. D'où le piège ci-dessous.
+
+## Déployer un changement
+
+```mermaid
+sequenceDiagram
+    participant Dev as MacBook (dev)
+    participant GH as GitHub (main)
+    participant Drop as Droplet
+
+    Dev->>GH: git push origin main
+    Dev->>Drop: ssh droplet
+    Drop->>GH: git pull
+    Drop->>Drop: docker compose -f compose.prod.yaml up -d --build app
+    Note over Drop: rebuild l'image (code copié dedans),<br/>recrée le conteneur app
+    Drop->>Drop: docker compose -f compose.prod.yaml exec app<br/>php bin/console cache:clear
+    Note over Drop: ⚠ OBLIGATOIRE : le volume app_var garde le<br/>cache Twig compilé — sans cache:clear, les<br/>templates modifiés ne s'affichent PAS
+    Dev->>Drop: curl -s https://trading-tracker.freeddns.org/ (vérif)
+```
+
+Commande complète :
+
+```bash
+ssh droplet 'cd /root/workspace_dar/trading-tracker \
+  && git pull \
+  && docker compose -f compose.prod.yaml up -d --build app \
+  && docker compose -f compose.prod.yaml exec app php bin/console cache:clear'
+```
+
+- Changement de `docker/nginx/default.conf` uniquement : pas besoin de rebuild,
+  `docker compose -f compose.prod.yaml up -d --force-recreate nginx` suffit
+  (le fichier est un bind mount).
+- Nouvelle migration Doctrine :
+  `docker compose -f compose.prod.yaml exec app php bin/console doctrine:migrations:migrate -n`.
+- Les builds prennent plusieurs minutes (1 vCPU + swap) — c'est normal.
+
+## Variables d'environnement (prod)
+
+Le `.env` prod vit sur le droplet (`chmod 600`, **jamais commité** — le
+`compose.prod.yaml` le charge via `env_file`). Variables attendues :
+
+| Variable | Rôle |
+|---|---|
+| `APP_ENV` | `prod` |
+| `APP_SECRET` | généré sur le droplet, différent des autres environnements |
+| `DATABASE_URL` | `postgresql://trading_user:…@database:5432/trading_data?serverVersion=16&charset=utf8` |
+| `POSTGRES_PASSWORD` | doit correspondre au mot de passe de `DATABASE_URL` |
+| `FIREBASE_API_KEY` / `FIREBASE_AUTH_DOMAIN` / `FIREBASE_PROJECT_ID` / `FIREBASE_CREDENTIALS` | **vides en prod** → le bouton « Continuer avec Google » est inactif |
+| `R2_BUCKET` / `R2_ENDPOINT` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | stockage des screenshots sur Cloudflare R2 |
+| `SCREENSHOTS_BASE_URL` | URL publique `*.r2.dev` du bucket, injectée comme global Twig |
+
+Le [Dockerfile](../Dockerfile) écrit un `.env` **stub** (valeurs factices) dans
+l'image, uniquement pour que `composer install` et `importmap:install` passent au
+build ; à l'exécution, `env_file` écrase tout avec les vraies valeurs.
+
+## Données
+
+- Données réelles migrées depuis la base locale le 15/09/2026 (267 trades,
+  7 users, 138 screenshots) via dump SQL `--data-only --inserts`.
+- Migrations Doctrine au niveau `Version20260906000001` à cette date.
+- Snapshot local : `make snapshot` (lit `DATABASE_URL` dans `.env.local`/`.env`,
+  écrit dans `snapshots/`). **Ne jamais commiter un dump SQL.**
+
+## Historique et pièges connus
+
+- **Historique git réécrit 2× le 15/09/2026** (`git-filter-repo`, force push) pour
+  purger des clés R2 et un mot de passe Postgres local. Tous les hash antérieurs
+  ont changé. Tout clone datant d'avant doit être re-cloné ou réaligné avec
+  `git fetch && git reset --hard origin/main` — **jamais `git pull`** (ça
+  fusionnerait l'ancien historique avec le nouveau).
+- Le repo est **public** : rien de sensible ne doit entrer dans un commit
+  (`.env*`, dumps SQL, clés dans la doc — c'est déjà arrivé, d'où la réécriture).
+- Rotation des clés R2 recommandée (elles ont été visibles publiquement avant la
+  purge) — action côté dashboard Cloudflare.
+
+## Dépannage rapide
+
+| Symptôme | Cause probable | Remède |
+|---|---|---|
+| Un changement de template ne s'affiche pas | Cache Twig dans `app_var` | `exec app php bin/console cache:clear` |
+| Un changement de code PHP ne s'applique pas | Le code est copié dans l'image | rebuild : `up -d --build app` |
+| `docker build` échoue/tué sur le droplet | Swap absent ou plein | vérifier `swapon --show` (2 Go attendus) |
+| Certificat expiré | Timer certbot ou hook en panne | `certbot renew --dry-run`, vérifier le hook `reload-nginx.sh` |
+| 502 sur le site | conteneur app down | `docker compose -f compose.prod.yaml ps` puis `logs app` |
+| Login Google ne marche pas en prod | `FIREBASE_*` vides — état normal actuel | renseigner les variables dans le `.env` du droplet |

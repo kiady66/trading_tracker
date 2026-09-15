@@ -4,7 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Trading Tracker is a Symfony 7.3 web application for tracking and analyzing trades. It uses PostgreSQL for data storage, Doctrine ORM for database operations, and Twig with Stimulus.js/Hotwired Turbo for the frontend.
+Trading Tracker is a Symfony 7.3 web application for tracking and analyzing trades.
+PostgreSQL + Doctrine ORM, Twig + Stimulus.js/Hotwired Turbo frontend (Asset Mapper,
+no build step), screenshots on Cloudflare R2.
+
+**Production is live** at https://trading-tracker.freeddns.org (DigitalOcean droplet,
+Docker Compose). The old Mac mini deployment is obsolete.
+
+## Documentation map
+
+Read these before diving into the code — they are written to orient an AI quickly:
+
+| Doc | Contents |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Stack, ER diagram of all entities, request flow, auth (form + Firebase), R2 screenshot pipeline, routes |
+| [docs/PRODUCTION.md](docs/PRODUCTION.md) | **Prod runbook**: infra diagram, deploy procedure (with the cache:clear trap), SSL/renewal, env vars, troubleshooting |
+| [docs/API.md](docs/API.md) | REST API reference (`/api/*`) |
+| [docs/plans/](docs/plans/) | Historical/feature plans. `macmini-deployment.md`, `oracle-cloud-deployment.md`, `railway-deployment.md` are **obsolete** (superseded by the droplet); others describe shipped or planned features |
 
 ## Common Commands
 
@@ -12,21 +28,20 @@ Trading Tracker is a Symfony 7.3 web application for tracking and analyzing trad
 # Start development server on localhost:8001
 make run
 
+# SQL snapshot of the local database (reads DATABASE_URL from .env.local/.env)
+make snapshot
+
 # Run tests
 vendor/bin/phpunit
-
-# Run a single test file
-vendor/bin/phpunit tests/path/to/TestClass.php
-
-# Run a single test method
-vendor/bin/phpunit --filter testMethodName
+vendor/bin/phpunit tests/path/to/TestClass.php     # single file
+vendor/bin/phpunit --filter testMethodName          # single method
 
 # Database migrations
 symfony console doctrine:migrations:migrate
 symfony console doctrine:migrations:diff   # Generate migration from entity changes
 
-# Load fixtures (test data)
-symfony console doctrine:fixtures:load
+# Load fixtures — ALWAYS --append (see pitfalls below)
+symfony console doctrine:fixtures:load --append
 
 # Clear cache
 symfony console cache:clear
@@ -35,44 +50,53 @@ symfony console cache:clear
 composer install
 ```
 
-## Architecture
+Deploying to production is a different procedure — see
+[docs/PRODUCTION.md](docs/PRODUCTION.md#déployer-un-changement).
 
-### Domain Model
+## ⚠ Critical pitfalls
 
-The core domain revolves around `Trade` entity which has relationships with:
-- **User** (many-to-one) - trade owner
-- **TradeType**, **Trend**, **Result** (many-to-one) - trade classification
-- **Timeframe**, **Confluence**, **Setup** (many-to-many) - flexible categorization
-- **TradeScreenshot** (one-to-many) - execution/management/closing screenshots
-- **TradeError** (many-to-one) - mistake tracking
+1. **The local dev database contains REAL trading data** (it was the source of the
+   prod data). Never drop it, never run `doctrine:fixtures:load` without
+   `--append` (a purge would wipe real trades). Fixtures must stay idempotent.
+2. **Prod deploys need `cache:clear`**: on the droplet, `var/` lives in a named
+   volume that survives rebuilds, so the compiled Twig cache goes stale. Rebuild
+   alone is not enough. Full procedure in docs/PRODUCTION.md.
+3. **Never commit** `.env.local`, `.env.test`, SQL dumps, or any credential — the
+   repo is **public**. The committed `.env` holds only placeholder defaults;
+   real secrets live in `.env.local` (dev) and in the droplet's `.env` (prod).
+4. **Git history was rewritten on 2026-09-15** (twice, to purge leaked secrets).
+   Any clone older than that must be re-cloned or `git fetch && git reset --hard
+   origin/main` — never `git pull` across the rewrite.
+5. **Only one real user account** (id=2) and its email address is fictitious.
+   Be careful with auth or migration logic that matches users by email.
 
-### Directory Structure
+## Architecture in one paragraph
 
-- `src/Controller/` - HTTP controllers (TradeController, StatsController, SecurityController, etc.)
-- `src/Entity/` - Doctrine entities with attribute-based ORM mapping
-- `src/Repository/` - Custom query methods for entities
-- `src/Form/` - Symfony form types
-- `src/Service/` - Business logic (FileUploader for screenshot handling)
-- `src/Command/` - CLI commands (CreateAdminCommand)
-- `templates/` - Twig templates organized by feature
-- `assets/controllers/` - Stimulus JavaScript controllers
+The core entity is `Trade` (owner `User`; classification via `TradeType` and
+`Trend`; many-to-many `Timeframe`/`Confluence`; screenshots via
+`TradeScreenshot`; mistakes via `TradeError`). `status` is derived from dates
+(watchlist → open → closed) and gain fields are computed on save. Controllers live
+in `src/Controller/` (plus `Api/` and `Admin/`), custom queries in
+`src/Repository/` (stats), business logic in `src/Service/` (`FileUploader`
+compresses with GD and uploads to R2). Full details and diagrams:
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-### Authentication
+## Authentication
 
-Form-based login using Symfony Security with email as identifier. User roles: ROLE_USER, ROLE_ADMIN, ROLE_MODERATOR, ROLE_TRADER. All routes except `/login`, `/register`, and `/` require ROLE_USER.
-
-### Frontend
-
-Uses Symfony Asset Mapper (no webpack/npm build step). JavaScript interactivity via Stimulus.js controllers and Hotwired Turbo for AJAX navigation.
+Form-based login (email as identifier) plus Firebase "Sign in with Google"
+(inactive in prod while `FIREBASE_*` env vars are empty). Roles: ROLE_USER,
+ROLE_ADMIN, ROLE_MODERATOR, ROLE_TRADER. All routes except `/login`, `/register`,
+and `/` require ROLE_USER.
 
 ## Database
 
-PostgreSQL 15+ with Doctrine ORM. Connection configured in `.env`. Docker Compose available for local PostgreSQL instance:
-
-```bash
-docker compose up -d
-```
+PostgreSQL with Doctrine ORM. Local connection configured in `.env.local`
+(`DATABASE_URL`). Docker Compose available for a local PostgreSQL instance:
+`docker compose up -d` (dev stack `compose.yaml` — the prod stack is
+`compose.prod.yaml`, droplet only).
 
 ## File Uploads
 
-Trade screenshots stored in `public/uploads/`. The `FileUploader` service handles image compression and storage.
+Trade screenshots are compressed by the `FileUploader` service and stored on
+**Cloudflare R2** (not on local disk); templates build image URLs from the
+`screenshots_base_url` Twig global.
