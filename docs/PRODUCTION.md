@@ -175,10 +175,34 @@ Le `.env` prod vit sur le droplet (`chmod 600`, **jamais commité** — le
 | `FIREBASE_API_KEY` / `FIREBASE_AUTH_DOMAIN` / `FIREBASE_PROJECT_ID` / `FIREBASE_CREDENTIALS` | **vides en prod** → le bouton « Continuer avec Google » est inactif |
 | `R2_BUCKET` / `R2_ENDPOINT` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | stockage des screenshots sur Cloudflare R2 |
 | `SCREENSHOTS_BASE_URL` | URL publique `*.r2.dev` du bucket, injectée comme global Twig |
+| `CLAUDE_CODE_OAUTH_TOKEN` | auth headless de Claude Code pour `app:news:generate` (généré via `claude setup-token`) |
 
 Le [Dockerfile](../Dockerfile) écrit un `.env` **stub** (valeurs factices) dans
 l'image, uniquement pour que `composer install` et `importmap:install` passent au
 build ; à l'exécution, `env_file` écrase tout avec les vraies valeurs.
+
+## News quotidiennes (cron)
+
+La commande `app:news:generate` (voir
+[GenerateDailyNewsCommand](../src/Command/GenerateDailyNewsCommand.php)) génère
+le wrap de news du jour en lançant `claude -p` avec recherche web, puis
+l'enregistre dans l'entité `DailyNews` (page `/news`).
+
+- **Claude Code est installé dans l'image Docker** (voir
+  [Dockerfile](../Dockerfile)) : `nodejs` + `@anthropic-ai/claude-code`, avec le
+  `ripgrep` système (`USE_BUILTIN_RIPGREP=0`, le binaire embarqué est glibc et
+  l'image est musl/Alpine).
+- **Auth headless** : `CLAUDE_CODE_OAUTH_TOKEN` dans le `.env` du droplet. Le
+  token se génère une fois, en interactif, avec `claude setup-token` (sur
+  n'importe quelle machine) — jamais commité.
+- **Cron (sur l'hôte du droplet)**, tous les soirs à 23h59 :
+
+```cron
+59 23 * * * cd /root/workspace_dar/trading-tracker && docker compose -f compose.prod.yaml exec -T app php bin/console app:news:generate >> /var/log/news-cron.log 2>&1
+```
+
+La génération prend plusieurs minutes (recherche web + rédaction, timeout
+15 min dans la commande). Test manuel : `make prod-console CMD="app:news:generate"`.
 
 ## Données
 

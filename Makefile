@@ -65,7 +65,7 @@ prod-logs: ## Suit les logs du conteneur app en prod (100 dernières lignes)
 prod-shell: ## Ouvre un shell dans le conteneur app en prod
 	ssh -t $(PROD_SSH) 'cd $(PROD_DIR) && $(PROD_COMPOSE) exec app sh'
 
-prod-console: ## Console Symfony en prod, ex : make prod-console CMD="app:generate-daily-news"
+prod-console: ## Console Symfony en prod, ex : make prod-console CMD="app:news:generate"
 	ssh $(PROD_SSH) 'cd $(PROD_DIR) && $(PROD_COMPOSE) exec -T app php bin/console $(CMD)'
 
 prod-snapshot: ## Dump SQL de la base de PROD, rapatrié dans snapshots/ (⚠ ne jamais commiter)

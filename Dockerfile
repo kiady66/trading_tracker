@@ -19,6 +19,14 @@ RUN apk add --no-cache \
         mbstring \
         xml
 
+# Claude Code CLI : requis par app:news:generate (claude -p).
+# Sur Alpine (musl), le ripgrep embarqué (glibc) ne fonctionne pas : on installe
+# celui du système et on force son usage via USE_BUILTIN_RIPGREP=0.
+# Auth à l'exécution : CLAUDE_CODE_OAUTH_TOKEN attendu dans le .env prod.
+RUN apk add --no-cache nodejs npm libgcc libstdc++ ripgrep \
+    && npm install -g @anthropic-ai/claude-code
+ENV USE_BUILTIN_RIPGREP=0
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
