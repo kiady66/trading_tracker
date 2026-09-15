@@ -7,6 +7,7 @@ public/uploads/
 .env
 .env.local
 docker/
+!docker/entrypoint.sh
 compose*.yaml
 *.md
 snapshots/
