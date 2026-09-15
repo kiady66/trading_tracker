@@ -48,9 +48,15 @@ symfony console cache:clear
 
 # Install dependencies (auto-runs cache:clear, assets:install, importmap:install)
 composer install
+
+# Deploy to production (fetch/reset, rebuild, migrations, cache:clear, healthcheck)
+make deploy
+
+# Other prod targets: prod-check, prod-cache-clear, prod-migrate, prod-logs,
+# prod-ps, prod-shell, prod-console CMD="...", prod-nginx-reload, prod-snapshot
 ```
 
-Deploying to production is a different procedure — see
+Production procedure details (and the cache:clear trap): see
 [docs/PRODUCTION.md](docs/PRODUCTION.md#déployer-un-changement).
 
 ## ⚠ Critical pitfalls

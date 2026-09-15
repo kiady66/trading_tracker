@@ -3,8 +3,9 @@
 > **TL;DR pour une IA** : la prod tourne sur un droplet DigitalOcean derrière
 > **https://trading-tracker.freeddns.org** (SSL Let's Encrypt actif, renouvellement
 > automatique). Accès : `ssh droplet` depuis la machine de dev. Pour déployer un
-> changement de code : `git pull` + rebuild du conteneur `app` + **`cache:clear`
-> obligatoire** (voir [Déployer](#déployer-un-changement)). Les secrets sont dans
+> changement de code : **`make deploy`** (reset sur origin/main + rebuild du
+> conteneur `app` + migrations + **`cache:clear` obligatoire** + healthcheck,
+> voir [Déployer](#déployer-un-changement)). Les secrets sont dans
 > `/root/workspace_dar/trading-tracker/.env` sur le droplet (jamais commité).
 
 ## Vue d'ensemble
@@ -122,30 +123,43 @@ sequenceDiagram
     participant Drop as Droplet
 
     Dev->>GH: git push origin main
-    Dev->>Drop: ssh droplet
-    Drop->>GH: git pull
+    Dev->>Drop: make deploy (ssh)
+    Drop->>GH: git fetch + reset --hard origin/main
     Drop->>Drop: docker compose -f compose.prod.yaml up -d --build app
     Note over Drop: rebuild l'image (code copié dedans),<br/>recrée le conteneur app
-    Drop->>Drop: docker compose -f compose.prod.yaml exec app<br/>php bin/console cache:clear
+    Drop->>Drop: exec app php bin/console<br/>doctrine:migrations:migrate -n
+    Drop->>Drop: exec app php bin/console cache:clear
     Note over Drop: ⚠ OBLIGATOIRE : le volume app_var garde le<br/>cache Twig compilé — sans cache:clear, les<br/>templates modifiés ne s'affichent PAS
-    Dev->>Drop: curl -s https://trading-tracker.freeddns.org/ (vérif)
+    Dev->>Drop: make prod-check (healthcheck HTTP)
 ```
 
-Commande complète :
+**Commande unique (depuis la machine de dev ou un runner CI/CD)** :
 
 ```bash
-ssh droplet 'cd /root/workspace_dar/trading-tracker \
-  && git pull \
-  && docker compose -f compose.prod.yaml up -d --build app \
-  && docker compose -f compose.prod.yaml exec app php bin/console cache:clear'
+make deploy
 ```
 
-- Changement de `docker/nginx/default.conf` uniquement : pas besoin de rebuild,
-  `docker compose -f compose.prod.yaml up -d --force-recreate nginx` suffit
-  (le fichier est un bind mount).
-- Nouvelle migration Doctrine :
-  `docker compose -f compose.prod.yaml exec app php bin/console doctrine:migrations:migrate -n`.
-- Les builds prennent plusieurs minutes (1 vCPU + swap) — c'est normal.
+Cette cible du [Makefile](../Makefile) enchaîne, via SSH : `git fetch` +
+`git reset --hard origin/main` (idempotent, insensible aux réécritures
+d'historique — contrairement à `git pull`), rebuild du conteneur `app`,
+`doctrine:migrations:migrate -n`, `cache:clear`, puis un healthcheck HTTP sur
+l'URL publique. Variables surchargables pour la CI :
+`make deploy PROD_SSH=root@134.209.226.113 PROD_DIR=/root/workspace_dar/trading-tracker`.
+
+Autres cibles prod du Makefile (`make help` pour la liste complète) :
+
+| Cible | Usage |
+|---|---|
+| `make prod-check` | healthcheck HTTP de la prod |
+| `make prod-cache-clear` | vider le cache Symfony (le piège du volume `app_var`) |
+| `make prod-migrate` | appliquer les migrations Doctrine |
+| `make prod-nginx-reload` | changement de `docker/nginx/default.conf` seul : pas de rebuild, simple recreate (bind mount) |
+| `make prod-ps` / `make prod-logs` | état / logs des conteneurs |
+| `make prod-shell` | shell dans le conteneur app |
+| `make prod-console CMD="..."` | commande `bin/console` arbitraire en prod |
+| `make prod-snapshot` | dump SQL de la base de prod dans `snapshots/` (jamais commité) |
+
+Les builds prennent plusieurs minutes (1 vCPU + swap) — c'est normal.
 
 ## Variables d'environnement (prod)
 
