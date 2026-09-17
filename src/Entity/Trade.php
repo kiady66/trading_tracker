@@ -23,6 +23,7 @@ class Trade
         // Cross Pairs
         'EUR/GBP',
         'EUR/JPY',
+        'EUR/CHF',
         'EUR/NZD',
         'GBP/JPY',
         'GBP/CHF',
@@ -45,6 +46,7 @@ class Trade
         // Commodities
         'XAU/USD',
         'SP500',
+        'NAS100',
         'USOIL'
     ];
 
