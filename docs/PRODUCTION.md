@@ -128,10 +128,10 @@ sequenceDiagram
     Dev->>Drop: make deploy (ssh)
     Drop->>GH: git fetch + reset --hard origin/main
     Drop->>Drop: docker compose -f compose.prod.yaml up -d --build app
-    Note over Drop: rebuild l'image (code copié dedans),<br/>recrée le conteneur app
-    Drop->>Drop: exec app php bin/console<br/>doctrine:migrations:migrate -n
+    Note over Drop: rebuild l'image (code copié dedans),<br/>recrée le conteneur app — l'entrypoint purge<br/>var/cache/prod avant le warmup (volume app_var)
     Drop->>Drop: exec app php bin/console cache:clear
-    Note over Drop: ⚠ OBLIGATOIRE : le volume app_var garde le<br/>cache Twig compilé — sans cache:clear, les<br/>templates modifiés ne s'affichent PAS
+    Drop->>Drop: exec app php bin/console<br/>doctrine:migrations:migrate -n
+    Note over Drop: cache:clear TOUJOURS avant les migrations :<br/>un cache compilé d'une ancienne version du code<br/>a déjà fait planter migrate (DBAL 3→4) et<br/>boucler le démarrage du conteneur
     Dev->>Drop: make prod-check (healthcheck HTTP)
 ```
 

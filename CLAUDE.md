@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Trading Tracker is a Symfony 7.3 web application for tracking and analyzing trades.
-PostgreSQL + Doctrine ORM, Twig + Stimulus.js/Hotwired Turbo frontend (Asset Mapper,
-no build step), screenshots on Cloudflare R2.
+Trading Tracker is a Symfony 7.4 LTS / PHP 8.5 web application for tracking and
+analyzing trades. PostgreSQL + Doctrine ORM (DBAL 4), Twig + Stimulus.js/Hotwired
+Turbo frontend (Asset Mapper, no build step), screenshots on Cloudflare R2,
+error monitoring via Sentry (prod only). Two cTrader cBots feed the API
+(see [ctrader/README.md](ctrader/README.md)).
 
 **Production is live** at https://trading-tracker.freeddns.org (DigitalOcean droplet,
 Docker Compose). The old Mac mini deployment is obsolete.
@@ -50,7 +52,7 @@ symfony console cache:clear
 # Install dependencies (auto-runs cache:clear, assets:install, importmap:install)
 composer install
 
-# Deploy to production (fetch/reset, rebuild, migrations, cache:clear, healthcheck)
+# Deploy to production (fetch/reset, rebuild, cache:clear, migrations, healthcheck)
 make deploy
 
 # Other prod targets: prod-check, prod-cache-clear, prod-migrate, prod-logs,
@@ -69,9 +71,10 @@ Production procedure details (and the cache:clear trap): see
 1. **The local dev database contains REAL trading data** (it was the source of the
    prod data). Never drop it, never run `doctrine:fixtures:load` without
    `--append` (a purge would wipe real trades). Fixtures must stay idempotent.
-2. **Prod deploys need `cache:clear`**: on the droplet, `var/` lives in a named
-   volume that survives rebuilds, so the compiled Twig cache goes stale. Rebuild
-   alone is not enough. Full procedure in docs/PRODUCTION.md.
+2. **The `var/` volume survives rebuilds** on the droplet, so a stale compiled
+   cache used to break deploys. This is now handled structurally: the container
+   entrypoint purges `var/cache/prod` at startup, and `make deploy` runs
+   `cache:clear` before migrations. Keep it that way — never reorder.
 3. **Never commit** `.env`, `.env.local`, `.env.test`, SQL dumps, or any
    credential — the repo is **public**. `.env` is gitignored here (it holds real
    local credentials, contrary to the usual Symfony convention); the committed
