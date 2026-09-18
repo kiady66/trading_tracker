@@ -72,9 +72,13 @@ Production procedure details (and the cache:clear trap): see
 2. **Prod deploys need `cache:clear`**: on the droplet, `var/` lives in a named
    volume that survives rebuilds, so the compiled Twig cache goes stale. Rebuild
    alone is not enough. Full procedure in docs/PRODUCTION.md.
-3. **Never commit** `.env.local`, `.env.test`, SQL dumps, or any credential — the
-   repo is **public**. The committed `.env` holds only placeholder defaults;
-   real secrets live in `.env.local` (dev) and in the droplet's `.env` (prod).
+3. **Never commit** `.env`, `.env.local`, `.env.test`, SQL dumps, or any
+   credential — the repo is **public**. `.env` is gitignored here (it holds real
+   local credentials, contrary to the usual Symfony convention); the committed
+   template is **`.env.example`** (copy to `.env` and fill in). Real secrets
+   live in `.env`/`.env.local` (dev) and in the droplet's `.env` (prod). The
+   committed `.env.dev` must hold no secret (and no empty `APP_SECRET=` line
+   either — it would override `.env.local` in the dotenv load order).
 4. **Git history was rewritten on 2026-09-15** (twice, to purge leaked secrets).
    Any clone older than that must be re-cloned or `git fetch && git reset --hard
    origin/main` — never `git pull` across the rewrite.
