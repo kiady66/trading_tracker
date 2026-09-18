@@ -30,13 +30,13 @@ PROD_DIR     ?= /root/workspace_dar/trading-tracker
 PROD_URL     ?= https://trading-tracker.freeddns.org
 PROD_COMPOSE  = docker compose -f compose.prod.yaml
 
-deploy: ## Déploiement complet en prod : reset sur origin/main, rebuild app, migrations, cache:clear, healthcheck
+deploy: ## Déploiement complet en prod : reset sur origin/main, rebuild app, cache:clear, migrations, healthcheck
 	ssh $(PROD_SSH) 'set -e; cd $(PROD_DIR) \
 		&& git fetch origin main \
 		&& git reset --hard origin/main \
 		&& $(PROD_COMPOSE) up -d --build app \
-		&& $(PROD_COMPOSE) exec -T app php bin/console doctrine:migrations:migrate -n \
-		&& $(PROD_COMPOSE) exec -T app php bin/console cache:clear'
+		&& $(PROD_COMPOSE) exec -T app php bin/console cache:clear \
+		&& $(PROD_COMPOSE) exec -T app php bin/console doctrine:migrations:migrate -n'
 	@$(MAKE) --no-print-directory prod-check
 
 prod-check: ## Vérifie que la prod répond (HTTP 2xx/3xx attendu)
