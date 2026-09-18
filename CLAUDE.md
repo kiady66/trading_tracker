@@ -20,6 +20,7 @@ Read these before diving into the code — they are written to orient an AI quic
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Stack, ER diagram of all entities, request flow, auth (form + Firebase), R2 screenshot pipeline, routes |
 | [docs/PRODUCTION.md](docs/PRODUCTION.md) | **Prod runbook**: infra diagram, deploy procedure (with the cache:clear trap), SSL/renewal, env vars, troubleshooting |
 | [docs/API.md](docs/API.md) | REST API reference (`/api/*`) |
+| [ctrader/README.md](ctrader/README.md) | The two cTrader cBots: auto-tracking of positions via the API, and the rollover stop-loss guard (17:00 New York) |
 | [docs/plans/](docs/plans/) | Historical/feature plans. `macmini-deployment.md`, `oracle-cloud-deployment.md`, `railway-deployment.md` are **obsolete** (superseded by the droplet); others describe shipped or planned features |
 
 ## Common Commands
