@@ -57,7 +57,7 @@ class FileUploaderTest extends TestCase
         // Mock local : ce test vérifie une attente (expects), contrairement
         // aux stubs partagés du setUp
         $storage = $this->createMock(FilesystemOperator::class);
-        $storage->method('fileExists')->with('screenshot.jpg')->willReturn(true);
+        $storage->expects($this->once())->method('fileExists')->with('screenshot.jpg')->willReturn(true);
         $storage->expects($this->once())->method('delete')->with('screenshot.jpg');
 
         (new FileUploader($storage, $this->slugger, 100, 80))->remove('screenshot.jpg');
@@ -66,7 +66,7 @@ class FileUploaderTest extends TestCase
     public function testRemoveIgnoresMissingFile(): void
     {
         $storage = $this->createMock(FilesystemOperator::class);
-        $storage->method('fileExists')->with('screenshot.jpg')->willReturn(false);
+        $storage->expects($this->once())->method('fileExists')->with('screenshot.jpg')->willReturn(false);
         $storage->expects($this->never())->method('delete');
 
         (new FileUploader($storage, $this->slugger, 100, 80))->remove('screenshot.jpg');

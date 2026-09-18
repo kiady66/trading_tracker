@@ -7,11 +7,9 @@ doctrine:
         #server_version: '16'
 
         profiling_collect_backtrace: '%kernel.debug%'
-        use_savepoints: true
     orm:
-        # Lazy objects natifs (PHP 8.4+ / ORM 3.5+) : plus de proxies générés,
-        # les options proxy_dir / auto_generate_proxy_classes sont obsolètes
-        enable_native_lazy_objects: true
+        # Les lazy objects natifs (PHP 8.4+) sont toujours actifs depuis
+        # DoctrineBundle 3 — plus de proxies générés ni d'option à porter
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
         identity_generation_preferences:
@@ -24,8 +22,6 @@ doctrine:
                 dir: '%kernel.project_dir%/src/Entity'
                 prefix: 'App\Entity'
                 alias: App
-        controller_resolver:
-            auto_mapping: false
 
 when@prod:
     doctrine:
