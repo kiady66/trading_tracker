@@ -482,6 +482,94 @@ class TradeApiControllerTest extends WebTestCase
         $this->assertSame('open', $data['status']);
     }
 
+    public function testPatchAvecStopLossAjouteALHistorique(): void
+    {
+        $client = $this->bootClient();
+
+        $trade = $this->makeTestTrade();
+        $trade->addStopLoss(1.0850);
+        $this->mockRepoWithTrade($trade, 1);
+
+        $client->request(
+            'PATCH',
+            '/api/trades/1',
+            [],
+            [],
+            $this->authHeaders(),
+            json_encode(['stopLoss' => 1.0900])
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertSame([1.0850, 1.0900], $data['stopLosses']);
+        $this->assertEquals(1.0900, $data['lastStopLoss']);
+    }
+
+    public function testPatchAvecStopLossIdentiqueAuDernierNeDupliquePas(): void
+    {
+        $client = $this->bootClient();
+
+        $trade = $this->makeTestTrade();
+        $trade->addStopLoss(1.0850);
+        $this->mockRepoWithTrade($trade, 1);
+
+        $client->request(
+            'PATCH',
+            '/api/trades/1',
+            [],
+            [],
+            $this->authHeaders(),
+            json_encode(['stopLoss' => 1.0850])
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertSame([1.0850], $data['stopLosses']);
+    }
+
+    public function testPatchAvecStopLossNonNumeriqueRetourne422(): void
+    {
+        $client = $this->bootClient();
+
+        $trade = $this->makeTestTrade();
+        $this->mockRepoWithTrade($trade, 1);
+
+        $client->request(
+            'PATCH',
+            '/api/trades/1',
+            [],
+            [],
+            $this->authHeaders(),
+            json_encode(['stopLoss' => 'pas un nombre'])
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertArrayHasKey('stopLoss', $data['errors']);
+    }
+
+    public function testPatchAvecStopLossesRemplaceLHistorique(): void
+    {
+        $client = $this->bootClient();
+
+        $trade = $this->makeTestTrade();
+        $trade->addStopLoss(1.0850);
+        $this->mockRepoWithTrade($trade, 1);
+
+        $client->request(
+            'PATCH',
+            '/api/trades/1',
+            [],
+            [],
+            $this->authHeaders(),
+            json_encode(['stopLosses' => [1.0800, 1.0900]])
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertSame([1.0800, 1.0900], $data['stopLosses']);
+    }
+
     public function testPatchTradeDUnAutreUtilisateurRetourne403(): void
     {
         $client = $this->bootClient();

@@ -141,6 +141,15 @@ class Trade
     #[ORM\Column(type: Types::BIGINT, nullable: true, unique: true)]
     private ?int $ctraderPositionId = null;
 
+    /**
+     * Historique des stop loss (prix), du plus ancien au plus récent.
+     * Alimenté par le cBot cTrader au fil du management du trade ; le dernier
+     * élément est le SL courant (utilisé par RolloverStopLossGuard pour le
+     * retirer puis le remettre autour du rollover quotidien).
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $stopLosses = null;
+
     #[ORM\OneToMany(targetEntity: TradeScreenshot::class, mappedBy: 'trade', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $screenshots;
 
@@ -560,6 +569,44 @@ class Trade
     {
         $this->ctraderPositionId = $ctraderPositionId;
         return $this;
+    }
+
+    /**
+     * @return float[]
+     */
+    public function getStopLosses(): array
+    {
+        return $this->stopLosses ?? [];
+    }
+
+    /**
+     * @param float[]|null $stopLosses
+     */
+    public function setStopLosses(?array $stopLosses): self
+    {
+        $this->stopLosses = $stopLosses === null || $stopLosses === []
+            ? null
+            : array_map(floatval(...), array_values($stopLosses));
+        return $this;
+    }
+
+    /**
+     * Ajoute un stop loss en fin d'historique (ignoré s'il est identique au dernier).
+     */
+    public function addStopLoss(float $stopLoss): self
+    {
+        $list = $this->getStopLosses();
+        if ($list === [] || end($list) !== $stopLoss) {
+            $list[] = $stopLoss;
+            $this->stopLosses = $list;
+        }
+        return $this;
+    }
+
+    public function getLastStopLoss(): ?float
+    {
+        $list = $this->getStopLosses();
+        return $list === [] ? null : (float) end($list);
     }
 
     public function getScreenshotsByCategory(string $category): array

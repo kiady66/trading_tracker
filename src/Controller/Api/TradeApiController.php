@@ -224,6 +224,24 @@ class TradeApiController extends AbstractController
             $trade->setCtraderPositionId($data['ctraderPositionId'] !== null ? (int) $data['ctraderPositionId'] : null);
         }
 
+        // Ajout d'un SL en fin d'historique (envoyé par les cBots à chaque modification)
+        if (array_key_exists('stopLoss', $data) && $data['stopLoss'] !== null) {
+            if (!is_numeric($data['stopLoss'])) {
+                $errors['stopLoss'] = 'Stop loss must be numeric';
+            } else {
+                $trade->addStopLoss((float) $data['stopLoss']);
+            }
+        }
+
+        // Remplacement complet de l'historique (édition manuelle)
+        if (array_key_exists('stopLosses', $data)) {
+            if ($data['stopLosses'] !== null && (!is_array($data['stopLosses']) || array_filter($data['stopLosses'], fn($sl) => !is_numeric($sl)))) {
+                $errors['stopLosses'] = 'Stop losses must be a list of numbers';
+            } else {
+                $trade->setStopLosses($data['stopLosses']);
+            }
+        }
+
         if (array_key_exists('tradeTypeId', $data)) {
             $tradeType = $data['tradeTypeId'] ? $this->em->find(TradeType::class, $data['tradeTypeId']) : null;
             if ($data['tradeTypeId'] && !$tradeType) {
@@ -301,6 +319,8 @@ class TradeApiController extends AbstractController
             'executionReason' => $trade->getExecutionReason(),
             'noteErrors' => $trade->getNoteErrors(),
             'ctraderPositionId' => $trade->getCtraderPositionId(),
+            'stopLosses' => $trade->getStopLosses(),
+            'lastStopLoss' => $trade->getLastStopLoss(),
             'tradeType' => $trade->getTradeType() ? [
                 'id' => $trade->getTradeType()->getId(),
                 'name' => $trade->getTradeType()->getName(),

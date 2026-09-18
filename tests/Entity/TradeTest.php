@@ -364,4 +364,49 @@ class TradeTest extends TestCase
     {
         $this->assertNull($this->trade->getId());
     }
+
+    public function testStopLossesEmptyByDefault(): void
+    {
+        $this->assertSame([], $this->trade->getStopLosses());
+        $this->assertNull($this->trade->getLastStopLoss());
+    }
+
+    public function testAddStopLossAppendsToHistory(): void
+    {
+        $this->trade->addStopLoss(1.0850);
+        $this->trade->addStopLoss(1.0900);
+
+        $this->assertSame([1.0850, 1.0900], $this->trade->getStopLosses());
+        $this->assertSame(1.0900, $this->trade->getLastStopLoss());
+    }
+
+    public function testAddStopLossIgnoresConsecutiveDuplicate(): void
+    {
+        $this->trade->addStopLoss(1.0850);
+        $this->trade->addStopLoss(1.0850);
+
+        $this->assertSame([1.0850], $this->trade->getStopLosses());
+    }
+
+    public function testAddStopLossAllowsNonConsecutiveDuplicate(): void
+    {
+        $this->trade->addStopLoss(1.0850);
+        $this->trade->addStopLoss(1.0900);
+        $this->trade->addStopLoss(1.0850);
+
+        $this->assertSame([1.0850, 1.0900, 1.0850], $this->trade->getStopLosses());
+    }
+
+    public function testSetStopLossesReplacesHistory(): void
+    {
+        $this->trade->addStopLoss(1.0);
+        $result = $this->trade->setStopLosses([1.10, 1.20]);
+
+        $this->assertSame($this->trade, $result);
+        $this->assertSame([1.10, 1.20], $this->trade->getStopLosses());
+
+        $this->trade->setStopLosses(null);
+        $this->assertSame([], $this->trade->getStopLosses());
+        $this->assertNull($this->trade->getLastStopLoss());
+    }
 }

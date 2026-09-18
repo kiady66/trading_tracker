@@ -134,6 +134,8 @@ Content-Type: application/json
 | `executionReason` | string\|null | Free text — why this trade was taken |
 | `noteErrors` | string\|null | Free text — mistakes noted |
 | `ctraderPositionId` | int\|null | cTrader position ID — used to link and retrieve the trade from the cBot |
+| `stopLoss` | number | **Append-only**: adds this price at the end of the `stopLosses` history (ignored if equal to the current last element). Sent by the cBots on every SL change |
+| `stopLosses` | number[]\|null | Full replacement of the stop loss history (manual edits). The last element is the current SL |
 
 **Example request**
 
@@ -211,6 +213,7 @@ These fields in the response are calculated server-side and cannot be set direct
 | `day` | Day of week extracted from `entryDate` |
 | `gainRR` | `finalRR × (riskPercentage / 100)` |
 | `gainEuro` | `gainRR × maxRiskEuro` |
+| `lastStopLoss` | Last element of `stopLosses` (current SL) — used by the `RolloverStopLossGuard` cBot to restore the SL after the daily rollover |
 
 ---
 

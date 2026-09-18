@@ -14,7 +14,8 @@ namespace cAlgo.Robots
     {
         // ── Paramètres configurables dans cTrader ────────────────────────────
 
-        [Parameter("API Base URL", DefaultValue = "http://localhost:8001")]
+        // Prod : https://trading-tracker.freeddns.org — pour tester en local, remplacer par http://localhost:8001
+        [Parameter("API Base URL", DefaultValue = "https://trading-tracker.freeddns.org")]
         public string ApiBaseUrl { get; set; }
 
         [Parameter("API Token", DefaultValue = "")]
@@ -88,6 +89,8 @@ namespace cAlgo.Robots
             if (asset == null) return;
 
             var updatePayload = BuildUpdatePayload(position);
+            if (updatePayload.Count == 0) return; // SL retiré (ex: rollover) — rien à mettre à jour
+
             _ = PatchTradeAsync(position.Id, updatePayload);
         }
 
@@ -193,33 +196,35 @@ namespace cAlgo.Robots
                 maxRiskEuro       = MaxRiskEuro,
                 initialRR,
                 ctraderPositionId = position.Id,
+                stopLoss          = position.StopLoss,
             };
         }
 
-        private object BuildUpdatePayload(Position position)
+        private Dictionary<string, object> BuildUpdatePayload(Position position)
         {
-            double? riskPct = null;
-            double? initialRR = null;
+            // PATCH partiel : on n'envoie que les champs réellement calculables,
+            // sinon l'API rejette un riskPercentage null (422).
+            var payload = new Dictionary<string, object>();
 
             if (position.StopLoss.HasValue)
             {
                 double slPips = Math.Abs(position.EntryPrice - position.StopLoss.Value) / Symbol.PipSize;
                 double lossAtSl = slPips * Symbol.PipValue * position.VolumeInUnits;
-                riskPct = Math.Round((lossAtSl / MaxRiskEuro) * 100.0, 2);
+                payload["riskPercentage"] = Math.Round((lossAtSl / MaxRiskEuro) * 100.0, 2);
+
+                // L'API ajoute ce SL en fin d'historique (trade.stopLosses)
+                payload["stopLoss"] = position.StopLoss.Value;
 
                 if (position.TakeProfit.HasValue)
                 {
                     double tpDistance = Math.Abs(position.TakeProfit.Value - position.EntryPrice);
                     double slDistance = Math.Abs(position.EntryPrice - position.StopLoss.Value);
-                    initialRR = slDistance > 0 ? Math.Round(tpDistance / slDistance, 2) : null;
+                    if (slDistance > 0)
+                        payload["initialRR"] = Math.Round(tpDistance / slDistance, 2);
                 }
             }
 
-            return new
-            {
-                riskPercentage = riskPct,
-                initialRR,
-            };
+            return payload;
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
