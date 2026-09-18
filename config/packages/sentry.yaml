@@ -1,6 +1,11 @@
 # Monitoring d'erreurs Sentry (plan gratuit Developer — alertes email).
 # Le bundle n'est enregistré qu'en prod (voir bundles.php) ; le DSN vit dans le
 # .env du droplet, jamais dans le repo (public). Un DSN vide désactive l'envoi.
+#
+# Philosophie : seules les VRAIES pannes remontent (exceptions non gérées,
+# erreurs PHP fatales, commandes console qui plantent). Tout le reste —
+# warnings, notices, dépréciations, erreurs HTTP client 4xx — est filtré pour
+# ne pas consommer le quota gratuit de 5 000 événements/mois.
 parameters:
     env(SENTRY_DSN): ''
 
@@ -8,13 +13,26 @@ when@prod:
     sentry:
         dsn: '%env(SENTRY_DSN)%'
         register_error_listener: true
+        messenger:
+            enabled: true
+            # Ne remonte un message messenger en échec qu'une fois ses retries
+            # épuisés (échec définitif), pas à chaque tentative
+            capture_soft_fails: false
         options:
             environment: 'prod'
-            # Bruit exclu : erreurs HTTP client déjà gérées par l'application
+            # Uniquement les erreurs PHP bloquantes — pas de warnings, notices
+            # ni dépréciations (l'app en génère : Doctrine, Flysystem…)
+            error_types: 'E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED & ~E_NOTICE & ~E_USER_NOTICE & ~E_WARNING & ~E_USER_WARNING'
+            # Erreurs HTTP client (4xx) : gérées par l'application, pas des pannes
             ignore_exceptions:
                 - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
                 - Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
                 - Symfony\Component\Security\Core\Exception\AccessDeniedException
+                - Symfony\Component\Security\Core\Exception\AuthenticationException
                 - Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException
+                - Symfony\Component\HttpKernel\Exception\BadRequestHttpException
+                - Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException
+                - Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException
+                - Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException
             # Pas de données personnelles (headers, IP…) envoyées à Sentry
             send_default_pii: false
