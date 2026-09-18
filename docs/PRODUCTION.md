@@ -163,6 +163,37 @@ Autres cibles prod du Makefile (`make help` pour la liste complète) :
 
 Les builds prennent plusieurs minutes (1 vCPU + swap) — c'est normal.
 
+### Déploiement avec migration de base de données
+
+⚠ **La base de prod contient les vraies données de trading.** Avant tout
+déploiement qui embarque une migration Doctrine, prendre un snapshot :
+
+```bash
+make prod-snapshot     # dump SQL de la prod, rapatrié dans snapshots/ (filet de sécurité)
+git push origin main
+make deploy            # joue automatiquement doctrine:migrations:migrate -n + cache:clear
+make prod-check
+```
+
+Règles pour écrire une migration sûre :
+
+- **Additive de préférence** : `ADD COLUMN ... DEFAULT NULL` ne touche aucune
+  ligne existante — c'est le cas idéal, déployable sans crainte.
+- **Jamais de `DROP`, `ALTER TYPE` ou `UPDATE` massif** sans snapshot préalable
+  et sans avoir testé la migration en local d'abord (`symfony console
+  doctrine:migrations:migrate`) — la base locale contient les mêmes données
+  réelles, c'est la répétition générale.
+- Le `down()` doit rester cohérent (rollback possible), mais un `down()` qui
+  droppe une colonne perd les données de cette colonne : le snapshot reste le
+  seul vrai retour arrière.
+- Doctrine ne rejoue que les migrations manquantes (table
+  `doctrine_migration_versions`) : `make deploy` est idempotent.
+
+🚫 **Le dossier `snapshots/` et tout dump `.sql` ne doivent JAMAIS être
+commités** : le repo est public et les dumps contiennent les vraies données de
+trading. Le `.gitignore` couvre `snapshots/` et `*.sql`, ne pas contourner
+(`git add -f` interdit).
+
 ## Variables d'environnement (prod)
 
 Le `.env` prod vit sur le droplet (`chmod 600`, **jamais commité** — le

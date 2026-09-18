@@ -20,7 +20,11 @@
 /public/uploads/
 /assets/vendor/
 ###< symfony/asset-mapper ###
+# Dumps SQL (make snapshot / make prod-snapshot) — contiennent les vraies données
+# de trading : NE JAMAIS commiter ce dossier ni aucun dump SQL (repo public)
 /snapshots/
+*.sql
+
 /.env.test
 
 # Clés de service Firebase — ne doivent jamais être versionnées
