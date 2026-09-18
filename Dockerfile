@@ -2,6 +2,8 @@
 # rester aligné avec l'environnement de dev
 FROM php:8.5-fpm-alpine
 
+# mbstring, xml et opcache sont déjà intégrés à l'image php:8.5 (php -m) —
+# les recompiler ferait échouer le build (aucun module produit)
 RUN apk add --no-cache \
     postgresql-dev \
     libzip-dev \
@@ -9,17 +11,12 @@ RUN apk add --no-cache \
     libpng-dev \
     libjpeg-turbo-dev \
     freetype-dev \
-    libxml2-dev \
-    oniguruma-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         pdo_pgsql \
         zip \
         intl \
-        gd \
-        opcache \
-        mbstring \
-        xml
+        gd
 
 # Claude Code CLI : requis par app:news:generate (claude -p).
 # Sur Alpine (musl), le ripgrep embarqué (glibc) ne fonctionne pas : on installe
