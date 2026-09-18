@@ -1,0 +1,20 @@
+# Monitoring d'erreurs Sentry (plan gratuit Developer — alertes email).
+# Le bundle n'est enregistré qu'en prod (voir bundles.php) ; le DSN vit dans le
+# .env du droplet, jamais dans le repo (public). Un DSN vide désactive l'envoi.
+parameters:
+    env(SENTRY_DSN): ''
+
+when@prod:
+    sentry:
+        dsn: '%env(SENTRY_DSN)%'
+        register_error_listener: true
+        options:
+            environment: 'prod'
+            # Bruit exclu : erreurs HTTP client déjà gérées par l'application
+            ignore_exceptions:
+                - Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+                - Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
+                - Symfony\Component\Security\Core\Exception\AccessDeniedException
+                - Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException
+            # Pas de données personnelles (headers, IP…) envoyées à Sentry
+            send_default_pii: false

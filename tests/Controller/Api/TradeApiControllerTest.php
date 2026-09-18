@@ -42,7 +42,16 @@ class TradeApiControllerTest extends WebTestCase
         );
 
         if (!$row) {
-            $this->markTestSkipped(sprintf('Utilisateur "%s" introuvable en base.', self::USER_EMAIL));
+            // La base de test peut être vidée par d'autres tests (TRUNCATE de
+            // FirebaseAuthenticatorTest) : on recrée l'utilisateur à la volée.
+            $conn->executeStatement(
+                'INSERT INTO "user" (email, roles, password, created_at, api_token) VALUES (?, ?, ?, now(), ?)',
+                [self::USER_EMAIL, '["ROLE_ADMIN"]', 'test-hash', bin2hex(random_bytes(32))]
+            );
+            $row = $conn->fetchAssociative(
+                'SELECT api_token FROM "user" WHERE email = ?',
+                [self::USER_EMAIL]
+            );
         }
 
         $this->bearerToken = $row['api_token'];

@@ -209,6 +209,7 @@ Le `.env` prod vit sur le droplet (`chmod 600`, **jamais commité** — le
 | `R2_BUCKET` / `R2_ENDPOINT` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | stockage des screenshots sur Cloudflare R2 |
 | `SCREENSHOTS_BASE_URL` | URL publique `*.r2.dev` du bucket, injectée comme global Twig |
 | `CLAUDE_CODE_OAUTH_TOKEN` | auth headless de Claude Code pour `app:news:generate` (généré via `claude setup-token`) |
+| `SENTRY_DSN` | monitoring d'erreurs Sentry (plan gratuit, alertes email) — vide = désactivé ; DSN du projet sur sentry.io → Settings → Client Keys |
 
 Le [Dockerfile](../Dockerfile) écrit un `.env` **stub** (valeurs factices) dans
 l'image, uniquement pour que `composer install` et `importmap:install` passent au
