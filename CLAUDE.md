@@ -88,6 +88,18 @@ Production procedure details (and the cache:clear trap): see
 5. **Only one real user account** (id=2) and its email address is fictitious.
    Be careful with auth or migration logic that matches users by email.
 
+## Before every pushed commit
+
+Ask two questions and act on them:
+
+1. **Does the documentation need updating?** Keep docs lean — they are loaded
+   into AI agents' context, so bloat has a real cost. In order of preference:
+   explicit variable/class/function names, clean code comments, a dedicated
+   README for self-contained directories (like `ctrader/`), and only add to the
+   global docs (`CLAUDE.md`, `docs/`) when genuinely necessary.
+2. **Does the change need unit or integration tests?** Add them in the same
+   commit when it does.
+
 ## Architecture in one paragraph
 
 The core entity is `Trade` (owner `User`; classification via `TradeType` and
