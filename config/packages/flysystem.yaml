@@ -1,8 +1,7 @@
 flysystem:
     storages:
         screenshots.storage:
-            adapter: 'asyncaws'
-            options:
+            asyncaws:
                 client: 'AsyncAws\S3\S3Client'
                 bucket: '%env(R2_BUCKET)%'
                 prefix: ''

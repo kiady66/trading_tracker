@@ -1,4 +1,6 @@
-FROM php:8.3-fpm-alpine
+# PHP >= 8.4 requis par doctrine.orm.enable_native_lazy_objects — 8.5 pour
+# rester aligné avec l'environnement de dev
+FROM php:8.5-fpm-alpine
 
 RUN apk add --no-cache \
     postgresql-dev \

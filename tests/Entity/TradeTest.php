@@ -159,7 +159,7 @@ class TradeTest extends TestCase
 
     public function testAddTimeframe(): void
     {
-        $timeframe = $this->createMock(Timeframe::class);
+        $timeframe = $this->createStub(Timeframe::class);
         $result = $this->trade->addTimeframe($timeframe);
 
         $this->assertSame($this->trade, $result);
@@ -169,7 +169,7 @@ class TradeTest extends TestCase
 
     public function testAddTimeframeDoesNotDuplicateExisting(): void
     {
-        $timeframe = $this->createMock(Timeframe::class);
+        $timeframe = $this->createStub(Timeframe::class);
         $this->trade->addTimeframe($timeframe);
         $this->trade->addTimeframe($timeframe);
 
@@ -178,7 +178,7 @@ class TradeTest extends TestCase
 
     public function testRemoveTimeframe(): void
     {
-        $timeframe = $this->createMock(Timeframe::class);
+        $timeframe = $this->createStub(Timeframe::class);
         $this->trade->addTimeframe($timeframe);
         $result = $this->trade->removeTimeframe($timeframe);
 
@@ -188,7 +188,7 @@ class TradeTest extends TestCase
 
     public function testAddConfluence(): void
     {
-        $confluence = $this->createMock(Confluence::class);
+        $confluence = $this->createStub(Confluence::class);
         $result = $this->trade->addConfluence($confluence);
 
         $this->assertSame($this->trade, $result);
@@ -197,7 +197,7 @@ class TradeTest extends TestCase
 
     public function testRemoveConfluence(): void
     {
-        $confluence = $this->createMock(Confluence::class);
+        $confluence = $this->createStub(Confluence::class);
         $this->trade->addConfluence($confluence);
         $result = $this->trade->removeConfluence($confluence);
 
@@ -239,15 +239,15 @@ class TradeTest extends TestCase
 
     public function testGetScreenshotsByCategory(): void
     {
-        $screenshot1 = $this->createMock(TradeScreenshot::class);
+        $screenshot1 = $this->createStub(TradeScreenshot::class);
         $screenshot1->method('getCategory')->willReturn('execution');
         $screenshot1->method('setTrade');
 
-        $screenshot2 = $this->createMock(TradeScreenshot::class);
+        $screenshot2 = $this->createStub(TradeScreenshot::class);
         $screenshot2->method('getCategory')->willReturn('management');
         $screenshot2->method('setTrade');
 
-        $screenshot3 = $this->createMock(TradeScreenshot::class);
+        $screenshot3 = $this->createStub(TradeScreenshot::class);
         $screenshot3->method('getCategory')->willReturn('execution');
         $screenshot3->method('setTrade');
 
@@ -262,7 +262,7 @@ class TradeTest extends TestCase
 
     public function testSetAndGetUser(): void
     {
-        $user = $this->createMock(User::class);
+        $user = $this->createStub(User::class);
         $result = $this->trade->setUser($user);
 
         $this->assertSame($this->trade, $result);
@@ -271,7 +271,7 @@ class TradeTest extends TestCase
 
     public function testSetAndGetTradeType(): void
     {
-        $tradeType = $this->createMock(TradeType::class);
+        $tradeType = $this->createStub(TradeType::class);
         $result = $this->trade->setTradeType($tradeType);
 
         $this->assertSame($this->trade, $result);
@@ -280,7 +280,7 @@ class TradeTest extends TestCase
 
     public function testSetAndGetTrend(): void
     {
-        $trend = $this->createMock(Trend::class);
+        $trend = $this->createStub(Trend::class);
         $result = $this->trade->setTrend($trend);
 
         $this->assertSame($this->trade, $result);
@@ -289,7 +289,7 @@ class TradeTest extends TestCase
 
     public function testSetAndGetError(): void
     {
-        $error = $this->createMock(TradeError::class);
+        $error = $this->createStub(TradeError::class);
         $result = $this->trade->setError($error);
 
         $this->assertSame($this->trade, $result);

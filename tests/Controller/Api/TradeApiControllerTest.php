@@ -62,11 +62,13 @@ class TradeApiControllerTest extends WebTestCase
         $this->authenticatedUser->setPassword('hashed');
         $this->authenticatedUser->setApiToken($this->bearerToken);
 
-        // Mock UserRepository : l'authenticator API retourne l'user en mémoire
-        $userRepo = $this->createMock(UserRepository::class);
+        // Stub UserRepository : l'authenticator API retourne l'user en mémoire
+        // (uniquement si le token cherché est le bon)
+        $userRepo = $this->createStub(UserRepository::class);
         $userRepo->method('findOneBy')
-            ->with(['apiToken' => $this->bearerToken])
-            ->willReturn($this->authenticatedUser);
+            ->willReturnCallback(fn(array $criteria) => ($criteria['apiToken'] ?? null) === $this->bearerToken
+                ? $this->authenticatedUser
+                : null);
         static::getContainer()->set(UserRepository::class, $userRepo);
 
         return $client;
@@ -95,7 +97,7 @@ class TradeApiControllerTest extends WebTestCase
 
     private function mockRepoWithTrade(Trade $trade, int $id): void
     {
-        $repo = $this->createMock(TradeRepository::class);
+        $repo = $this->createStub(TradeRepository::class);
         $repo->method('find')
             ->willReturnCallback(static fn(mixed $foundId) => $foundId == $id ? $trade : null);
         static::getContainer()->set(TradeRepository::class, $repo);
@@ -103,7 +105,7 @@ class TradeApiControllerTest extends WebTestCase
 
     private function mockRepoReturnsNull(): void
     {
-        $repo = $this->createMock(TradeRepository::class);
+        $repo = $this->createStub(TradeRepository::class);
         $repo->method('find')->willReturn(null);
         static::getContainer()->set(TradeRepository::class, $repo);
     }
@@ -281,7 +283,7 @@ class TradeApiControllerTest extends WebTestCase
         $trade2 = $this->makeTestTrade();
         $trade2->setAsset('GBP/USD');
 
-        $repo = $this->createMock(TradeRepository::class);
+        $repo = $this->createStub(TradeRepository::class);
         $repo->method('findBy')->willReturn([$trade1, $trade2]);
         static::getContainer()->set(TradeRepository::class, $repo);
 
@@ -318,7 +320,7 @@ class TradeApiControllerTest extends WebTestCase
     {
         $client = $this->bootClient();
 
-        $repo = $this->createMock(TradeRepository::class);
+        $repo = $this->createStub(TradeRepository::class);
         $repo->method('findBy')->willReturn([]);
         static::getContainer()->set(TradeRepository::class, $repo);
 
