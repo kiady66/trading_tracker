@@ -25,6 +25,15 @@ paramètre *API Base URL* par `http://localhost:8001`.
 > après une mise à jour du code, vérifier que l'URL et le token de l'instance
 > sont corrects.
 
+### Exécution cloud (gratuite)
+
+Les deux bots utilisent `AccessRights.None` et l'API `Http` de cAlgo (et non
+`System.Net.Http`), ce qui les rend éligibles à
+l'[exécution cloud de cTrader](https://help.ctrader.com/ctrader-algo/documentation/cloud-features/) :
+gratuite, jusqu'à 10 instances simultanées sur un compte live (1 seule sur un
+compte démo, limitée à 7 jours). Démarrer l'instance avec le bouton *cloud*
+au lieu de *play* — plus besoin de laisser cTrader Desktop allumé.
+
 ## TradingTrackerBot
 
 À chaque **ouverture de position** : crée le trade via `POST /api/trades` avec

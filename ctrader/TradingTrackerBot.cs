@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using cAlgo.API;
 
 namespace cAlgo.Robots
 {
-    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
+    // AccessRights.None + API Http de cAlgo (et non System.Net.Http) : requis
+    // pour l'exécution cloud de cTrader, qui interdit FullAccess.
+    // Réf : https://help.ctrader.com/ctrader-algo/guides/network-access/
+    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
     public class TradingTrackerBot : Robot
     {
         // ── Paramètres configurables dans cTrader ────────────────────────────
@@ -34,8 +33,6 @@ namespace cAlgo.Robots
             "CAD/JPY", "CHF/JPY", "BTC/USD", "ETH/USD", "XAU/USD", "SP500"
         };
 
-        private HttpClient _http;
-
         // Deals de clôture déjà transmis à l'API (cache mémoire ; l'API dédoublonne
         // de toute façon par dealId, donc un redémarrage du bot est sans risque).
         private readonly HashSet<long> _sentDealIds = new();
@@ -50,9 +47,6 @@ namespace cAlgo.Robots
                 return;
             }
 
-            _http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiToken);
-
             Positions.Opened   += OnPositionOpened;
             Positions.Modified += OnPositionModified;
             Positions.Closed   += OnPositionClosed;
@@ -65,7 +59,6 @@ namespace cAlgo.Robots
             Positions.Opened   -= OnPositionOpened;
             Positions.Modified -= OnPositionModified;
             Positions.Closed   -= OnPositionClosed;
-            _http?.Dispose();
         }
 
         // ── Événement : ouverture de position ─────────────────────────────────
@@ -81,8 +74,7 @@ namespace cAlgo.Robots
                 return;
             }
 
-            var payload = BuildPayload(position, asset);
-            _ = PostTradeAsync(payload, position.Id);
+            PostTrade(BuildPayload(position, asset), position.Id);
         }
 
         // ── Événement : modification de position (SL/TP) ──────────────────────
@@ -96,12 +88,12 @@ namespace cAlgo.Robots
 
             // Une clôture partielle réduit le volume de la position (même Id) et
             // enregistre un deal dans History — on synchronise avant le reste.
-            _ = SyncExitsAsync(position.Id, closed: false);
+            SyncExits(position.Id, closed: false);
 
             var updatePayload = BuildUpdatePayload(position);
             if (updatePayload.Count == 0) return; // SL retiré (ex: rollover) — rien à mettre à jour
 
-            _ = PatchTradeAsync(position.Id, updatePayload);
+            PatchTrade(position.Id, updatePayload);
         }
 
         // ── Événement : clôture de position (SL, TP ou fermeture manuelle) ────
@@ -111,44 +103,27 @@ namespace cAlgo.Robots
             var position = args.Position;
             if (MapSymbol(position.SymbolName) == null) return;
 
-            _ = SyncExitsAsync(position.Id, closed: true);
+            SyncExits(position.Id, closed: true);
         }
 
         // ── Appels API ────────────────────────────────────────────────────────
 
-        private async Task PostTradeAsync(object payload, long positionId)
+        private void PostTrade(object payload, long positionId)
         {
-            try
-            {
-                var json = JsonSerializer.Serialize(payload);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var response = await _http.PostAsync($"{ApiBaseUrl}/api/trades", content);
-                var body = await response.Content.ReadAsStringAsync();
+            var response = SendJson(HttpMethod.Post, $"{ApiBaseUrl}/api/trades", payload);
 
-                if (response.IsSuccessStatusCode)
-                    Print($"[TradingTracker] ✓ Trade créé (position #{positionId})");
-                else
-                    Print($"[TradingTracker] ✗ Erreur création trade #{positionId}: {response.StatusCode} — {body}");
-            }
-            catch (Exception ex)
-            {
-                Print($"[TradingTracker] ✗ Erreur réseau (POST): {ex.Message}");
-            }
+            if (response != null && response.IsSuccessful)
+                Print($"[TradingTracker] ✓ Trade créé (position #{positionId})");
+            else
+                Print($"[TradingTracker] ✗ Erreur création trade #{positionId}: {response?.StatusCode} — {response?.Body}");
         }
 
-        private async Task PatchTradeAsync(long positionId, object payload)
+        private void PatchTrade(long positionId, object payload)
         {
-            try
-            {
-                var tradeId = await FindTradeIdAsync(positionId);
-                if (tradeId == null) return;
+            var tradeId = FindTradeId(positionId);
+            if (tradeId == null) return;
 
-                await SendPatchAsync(tradeId.Value, payload, positionId);
-            }
-            catch (Exception ex)
-            {
-                Print($"[TradingTracker] ✗ Erreur réseau (PATCH): {ex.Message}");
-            }
+            SendPatch(tradeId.Value, payload, positionId);
         }
 
         /// <summary>
@@ -157,67 +132,58 @@ namespace cAlgo.Robots
         /// l'API dédoublonne par dealId et calcule le RR final à la clôture totale.
         /// Réf : https://help.ctrader.com/ctrader-algo/references/Trading/History/HistoricalTrade/
         /// </summary>
-        private async Task SyncExitsAsync(long positionId, bool closed)
+        private void SyncExits(long positionId, bool closed)
         {
-            try
+            var deals = new List<HistoricalTrade>();
+            foreach (var historicalTrade in History)
             {
-                var deals = new List<HistoricalTrade>();
-                foreach (var historicalTrade in History)
+                if (historicalTrade.PositionId == positionId && !_sentDealIds.Contains(historicalTrade.ClosingDealId))
+                    deals.Add(historicalTrade);
+            }
+
+            if (deals.Count == 0 && !closed) return; // Modified sans clôture partielle (ex: changement de SL)
+
+            var tradeId = FindTradeId(positionId);
+            if (tradeId == null) return;
+
+            for (var i = 0; i < deals.Count; i++)
+            {
+                var deal = deals[i];
+                var payload = new Dictionary<string, object>
                 {
-                    if (historicalTrade.PositionId == positionId && !_sentDealIds.Contains(historicalTrade.ClosingDealId))
-                        deals.Add(historicalTrade);
-                }
-
-                if (deals.Count == 0 && !closed) return; // Modified sans clôture partielle (ex: changement de SL)
-
-                var tradeId = await FindTradeIdAsync(positionId);
-                if (tradeId == null) return;
-
-                for (var i = 0; i < deals.Count; i++)
-                {
-                    var deal = deals[i];
-                    var payload = new Dictionary<string, object>
+                    ["exit"] = new
                     {
-                        ["exit"] = new
-                        {
-                            dealId = deal.ClosingDealId.ToString(),
-                            price  = deal.ClosingPrice,
-                            volume = deal.VolumeInUnits,
-                            date   = deal.ClosingTime.ToString("o"),
-                        },
-                    };
-                    // Le flag closed part avec le dernier deal : l'API fixe alors
-                    // exitDate et calcule le RR final pondéré.
-                    if (closed && i == deals.Count - 1)
-                        payload["closed"] = true;
+                        dealId = deal.ClosingDealId.ToString(),
+                        price  = deal.ClosingPrice,
+                        volume = deal.VolumeInUnits,
+                        date   = deal.ClosingTime.ToString("o"),
+                    },
+                };
+                // Le flag closed part avec le dernier deal : l'API fixe alors
+                // exitDate et calcule le RR final pondéré.
+                if (closed && i == deals.Count - 1)
+                    payload["closed"] = true;
 
-                    if (await SendPatchAsync(tradeId.Value, payload, positionId))
-                        _sentDealIds.Add(deal.ClosingDealId);
-                }
+                if (SendPatch(tradeId.Value, payload, positionId))
+                    _sentDealIds.Add(deal.ClosingDealId);
+            }
 
-                // Clôture reçue mais deal pas encore visible dans History : signaler quand même
-                if (closed && deals.Count == 0)
-                    await SendPatchAsync(tradeId.Value, new Dictionary<string, object> { ["closed"] = true }, positionId);
-            }
-            catch (Exception ex)
-            {
-                Print($"[TradingTracker] ✗ Erreur sync sorties #{positionId}: {ex.Message}");
-            }
+            // Clôture reçue mais deal pas encore visible dans History : signaler quand même
+            if (closed && deals.Count == 0)
+                SendPatch(tradeId.Value, new Dictionary<string, object> { ["closed"] = true }, positionId);
         }
 
         /// <summary>Retrouve l'id du trade en DB via ctraderPositionId (null si absent).</summary>
-        private async Task<int?> FindTradeIdAsync(long positionId)
+        private int? FindTradeId(long positionId)
         {
-            var searchResponse = await _http.GetAsync($"{ApiBaseUrl}/api/trades?ctraderPositionId={positionId}");
-            if (!searchResponse.IsSuccessStatusCode)
+            var response = SendJson(HttpMethod.Get, $"{ApiBaseUrl}/api/trades?ctraderPositionId={positionId}");
+            if (response == null || !response.IsSuccessful)
             {
                 Print($"[TradingTracker] ✗ Trade introuvable pour position #{positionId}");
                 return null;
             }
 
-            var searchBody = await searchResponse.Content.ReadAsStringAsync();
-            var trades = JsonSerializer.Deserialize<JsonElement[]>(searchBody);
-
+            var trades = JsonSerializer.Deserialize<JsonElement[]>(response.Body);
             if (trades == null || trades.Length == 0)
             {
                 Print($"[TradingTracker] Trade non trouvé en DB pour position #{positionId}");
@@ -227,25 +193,52 @@ namespace cAlgo.Robots
             return trades[0].GetProperty("id").GetInt32();
         }
 
-        private async Task<bool> SendPatchAsync(int tradeId, object payload, long positionId)
+        private bool SendPatch(int tradeId, object payload, long positionId)
         {
-            var json = JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(new System.Net.Http.HttpMethod("PATCH"), $"{ApiBaseUrl}/api/trades/{tradeId}")
-            {
-                Content = content
-            };
-            var response = await _http.SendAsync(request);
+            var response = SendJson(HttpMethod.Patch, $"{ApiBaseUrl}/api/trades/{tradeId}", payload);
 
-            if (response.IsSuccessStatusCode)
+            if (response != null && response.IsSuccessful)
             {
                 Print($"[TradingTracker] ✓ Trade #{tradeId} mis à jour (position #{positionId})");
                 return true;
             }
 
-            var body = await response.Content.ReadAsStringAsync();
-            Print($"[TradingTracker] ✗ Erreur mise à jour #{tradeId}: {response.StatusCode} — {body}");
+            Print($"[TradingTracker] ✗ Erreur mise à jour #{tradeId}: {response?.StatusCode} — {response?.Body}");
             return false;
+        }
+
+        /// <summary>Requête via l'API Http de cAlgo (compatible cloud). Null en cas d'échec réseau.</summary>
+        private HttpResponse SendJson(HttpMethod method, string url, object payload = null)
+        {
+            try
+            {
+                var request = new HttpRequest(new Uri(url))
+                {
+                    Method  = method,
+                    Timeout = TimeSpan.FromSeconds(5),
+                };
+                request.Headers.Add("Authorization", "Bearer " + ApiToken);
+
+                if (payload != null)
+                {
+                    request.Headers.Add("Content-Type", "application/json");
+                    request.Body = JsonSerializer.Serialize(payload);
+                }
+
+                var response = Http.Send(request);
+                if (response.Exception != null)
+                {
+                    Print($"[TradingTracker] ✗ Erreur réseau ({method} {url}): {response.Exception.Message}");
+                    return null;
+                }
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                Print($"[TradingTracker] ✗ Erreur réseau ({method} {url}): {ex.Message}");
+                return null;
+            }
         }
 
         // ── Construction des payloads ─────────────────────────────────────────

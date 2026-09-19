@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using cAlgo.API;
 
@@ -24,7 +21,10 @@ namespace cAlgo.Robots
     /// retiré de la position ; après le rollover, le DERNIER élément de la liste est
     /// remis en place. Un redémarrage de cTrader pendant la fenêtre ne perd donc rien.
     /// </summary>
-    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.FullAccess)]
+    // AccessRights.None + API Http de cAlgo (et non System.Net.Http) : requis
+    // pour l'exécution cloud de cTrader, qui interdit FullAccess.
+    // Réf : https://help.ctrader.com/ctrader-algo/guides/network-access/
+    [Robot(TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
     public class RolloverStopLossGuard : Robot
     {
         // ── Paramètres configurables dans cTrader ────────────────────────────
@@ -44,7 +44,6 @@ namespace cAlgo.Robots
 
         // ── État ──────────────────────────────────────────────────────────────
 
-        private HttpClient _http;
         private TimeZoneInfo _newYork;
         private bool _inWindow;
 
@@ -67,9 +66,6 @@ namespace cAlgo.Robots
                 return;
             }
 
-            _http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ApiToken);
-
             Timer.Start(TimeSpan.FromSeconds(10));
 
             var ny = TimeZoneInfo.ConvertTimeFromUtc(Server.TimeInUtc, _newYork);
@@ -88,7 +84,6 @@ namespace cAlgo.Robots
         protected override void OnStop()
         {
             Timer.Stop();
-            _http?.Dispose();
         }
 
         protected override void OnTimer()
@@ -182,48 +177,59 @@ namespace cAlgo.Robots
 
         private (int Id, double? LastStopLoss)? FindTradeByPositionId(long positionId)
         {
-            try
-            {
-                var response = _http.GetAsync($"{ApiBaseUrl}/api/trades?ctraderPositionId={positionId}")
-                    .GetAwaiter().GetResult();
-                if (!response.IsSuccessStatusCode)
-                    return null;
-
-                var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                var trades = JsonSerializer.Deserialize<JsonElement[]>(body);
-                if (trades == null || trades.Length == 0)
-                    return null;
-
-                var trade = trades[0];
-                double? lastStopLoss = null;
-                if (trade.TryGetProperty("lastStopLoss", out var sl) && sl.ValueKind == JsonValueKind.Number)
-                    lastStopLoss = sl.GetDouble();
-
-                return (trade.GetProperty("id").GetInt32(), lastStopLoss);
-            }
-            catch (Exception ex)
-            {
-                Print($"[RolloverGuard] ✗ Erreur réseau (GET trade #{positionId}): {ex.Message}");
+            var response = SendJson(HttpMethod.Get, $"{ApiBaseUrl}/api/trades?ctraderPositionId={positionId}");
+            if (response == null || !response.IsSuccessful)
                 return null;
-            }
+
+            var trades = JsonSerializer.Deserialize<JsonElement[]>(response.Body);
+            if (trades == null || trades.Length == 0)
+                return null;
+
+            var trade = trades[0];
+            double? lastStopLoss = null;
+            if (trade.TryGetProperty("lastStopLoss", out var sl) && sl.ValueKind == JsonValueKind.Number)
+                lastStopLoss = sl.GetDouble();
+
+            return (trade.GetProperty("id").GetInt32(), lastStopLoss);
         }
 
         private bool AppendStopLoss(int tradeId, double stopLoss)
         {
+            var response = SendJson(HttpMethod.Patch, $"{ApiBaseUrl}/api/trades/{tradeId}", new { stopLoss });
+            return response != null && response.IsSuccessful;
+        }
+
+        /// <summary>Requête via l'API Http de cAlgo (compatible cloud). Null en cas d'échec réseau.</summary>
+        private HttpResponse SendJson(HttpMethod method, string url, object payload = null)
+        {
             try
             {
-                var json = JsonSerializer.Serialize(new { stopLoss });
-                var request = new HttpRequestMessage(new HttpMethod("PATCH"), $"{ApiBaseUrl}/api/trades/{tradeId}")
+                var request = new HttpRequest(new Uri(url))
                 {
-                    Content = new StringContent(json, Encoding.UTF8, "application/json"),
+                    Method  = method,
+                    Timeout = TimeSpan.FromSeconds(10),
                 };
-                var response = _http.SendAsync(request).GetAwaiter().GetResult();
-                return response.IsSuccessStatusCode;
+                request.Headers.Add("Authorization", "Bearer " + ApiToken);
+
+                if (payload != null)
+                {
+                    request.Headers.Add("Content-Type", "application/json");
+                    request.Body = JsonSerializer.Serialize(payload);
+                }
+
+                var response = Http.Send(request);
+                if (response.Exception != null)
+                {
+                    Print($"[RolloverGuard] ✗ Erreur réseau ({method} {url}): {response.Exception.Message}");
+                    return null;
+                }
+
+                return response;
             }
             catch (Exception ex)
             {
-                Print($"[RolloverGuard] ✗ Erreur réseau (PATCH trade #{tradeId}): {ex.Message}");
-                return false;
+                Print($"[RolloverGuard] ✗ Erreur réseau ({method} {url}): {ex.Message}");
+                return null;
             }
         }
 
