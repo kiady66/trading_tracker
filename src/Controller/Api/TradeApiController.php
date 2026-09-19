@@ -74,6 +74,9 @@ class TradeApiController extends AbstractController
             return $this->json(['errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $trade->closeFromExits();
+        $trade->calculateInitialRR();
+        $trade->calculateFinalRR();
         $trade->calculateStatus();
         $trade->calculateDay();
         $trade->calculateGainRR();
@@ -109,6 +112,9 @@ class TradeApiController extends AbstractController
             return $this->json(['errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        $trade->closeFromExits();
+        $trade->calculateInitialRR();
+        $trade->calculateFinalRR();
         $trade->calculateStatus();
         $trade->calculateDay();
         $trade->calculateGainRR();
@@ -233,6 +239,54 @@ class TradeApiController extends AbstractController
             }
         }
 
+        foreach (['entryPrice', 'targetPrice', 'volumeInUnits'] as $priceField) {
+            if (array_key_exists($priceField, $data)) {
+                if ($data[$priceField] !== null && !is_numeric($data[$priceField])) {
+                    $errors[$priceField] = ucfirst($priceField) . ' must be numeric';
+                } else {
+                    $trade->{'set' . ucfirst($priceField)}($data[$priceField] !== null ? (float) $data[$priceField] : null);
+                }
+            }
+        }
+
+        // Ajout d'une sortie (clôture partielle ou totale envoyée par le cBot).
+        // Idempotent : un dealId déjà enregistré est ignoré.
+        if (array_key_exists('exit', $data) && $data['exit'] !== null) {
+            $exit = $data['exit'];
+            if (!is_array($exit) || !isset($exit['price'], $exit['volume'])
+                || !is_numeric($exit['price']) || !is_numeric($exit['volume'])) {
+                $errors['exit'] = 'Exit must be an object with numeric price and volume';
+            } else {
+                $trade->addExit(
+                    (float) $exit['price'],
+                    (float) $exit['volume'],
+                    isset($exit['dealId']) ? (string) $exit['dealId'] : null,
+                    $exit['date'] ?? null,
+                );
+            }
+        }
+
+        // Remplacement complet des sorties (édition manuelle)
+        if (array_key_exists('exits', $data)) {
+            if ($data['exits'] !== null && (!is_array($data['exits'])
+                || array_filter($data['exits'], fn($e) => !is_array($e) || !isset($e['price'], $e['volume']) || !is_numeric($e['price']) || !is_numeric($e['volume'])))) {
+                $errors['exits'] = 'Exits must be a list of objects with numeric price and volume';
+            } else {
+                $trade->setExits($data['exits']);
+            }
+        }
+
+        // Clôture explicite (envoyée par le cBot sur Positions.Closed)
+        if (($data['closed'] ?? false) === true && $trade->getExitDate() === null) {
+            $exits = $trade->getExits();
+            $lastDate = $exits === [] ? null : (end($exits)['date'] ?? null);
+            try {
+                $trade->setExitDate(new \DateTime($lastDate ?? 'now'));
+            } catch (\Exception) {
+                $trade->setExitDate(new \DateTime());
+            }
+        }
+
         // Remplacement complet de l'historique (édition manuelle)
         if (array_key_exists('stopLosses', $data)) {
             if ($data['stopLosses'] !== null && (!is_array($data['stopLosses']) || array_filter($data['stopLosses'], fn($sl) => !is_numeric($sl)))) {
@@ -321,6 +375,10 @@ class TradeApiController extends AbstractController
             'ctraderPositionId' => $trade->getCtraderPositionId(),
             'stopLosses' => $trade->getStopLosses(),
             'lastStopLoss' => $trade->getLastStopLoss(),
+            'entryPrice' => $trade->getEntryPrice(),
+            'targetPrice' => $trade->getTargetPrice(),
+            'volumeInUnits' => $trade->getVolumeInUnits(),
+            'exits' => $trade->getExits(),
             'tradeType' => $trade->getTradeType() ? [
                 'id' => $trade->getTradeType()->getId(),
                 'name' => $trade->getTradeType()->getName(),

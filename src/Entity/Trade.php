@@ -145,10 +145,31 @@ class Trade
      * Historique des stop loss (prix), du plus ancien au plus récent.
      * Alimenté par le cBot cTrader au fil du management du trade ; le dernier
      * élément est le SL courant (utilisé par RolloverStopLossGuard pour le
-     * retirer puis le remettre autour du rollover quotidien).
+     * retirer puis le remettre autour du rollover quotidien). Le premier
+     * élément est le SL initial, base du calcul des RR.
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $stopLosses = null;
+
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $entryPrice = null;
+
+    /** Take profit au moment de l'exécution (base du RR initial). */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $targetPrice = null;
+
+    /** Volume à l'ouverture, en unités cTrader (base de pondération des sorties). */
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $volumeInUnits = null;
+
+    /**
+     * Sorties (clôtures partielles ou totale), du plus ancien au plus récent.
+     * Chaque entrée : {dealId, price, volume, date}. dealId est le
+     * ClosingDealId cTrader et sert de clé d'idempotence (un deal déjà
+     * enregistré est ignoré si le cBot le renvoie après un redémarrage).
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $exits = null;
 
     #[ORM\OneToMany(targetEntity: TradeScreenshot::class, mappedBy: 'trade', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $screenshots;
@@ -607,6 +628,162 @@ class Trade
     {
         $list = $this->getStopLosses();
         return $list === [] ? null : (float) end($list);
+    }
+
+    public function getInitialStopLoss(): ?float
+    {
+        $list = $this->getStopLosses();
+        return $list === [] ? null : (float) $list[0];
+    }
+
+    public function getEntryPrice(): ?float
+    {
+        return $this->entryPrice;
+    }
+
+    public function setEntryPrice(?float $entryPrice): self
+    {
+        $this->entryPrice = $entryPrice;
+        return $this;
+    }
+
+    public function getTargetPrice(): ?float
+    {
+        return $this->targetPrice;
+    }
+
+    public function setTargetPrice(?float $targetPrice): self
+    {
+        $this->targetPrice = $targetPrice;
+        return $this;
+    }
+
+    public function getVolumeInUnits(): ?float
+    {
+        return $this->volumeInUnits;
+    }
+
+    public function setVolumeInUnits(?float $volumeInUnits): self
+    {
+        $this->volumeInUnits = $volumeInUnits;
+        return $this;
+    }
+
+    /**
+     * @return array<array{dealId: ?string, price: float, volume: float, date: ?string}>
+     */
+    public function getExits(): array
+    {
+        return $this->exits ?? [];
+    }
+
+    public function setExits(?array $exits): self
+    {
+        $this->exits = $exits === null || $exits === [] ? null : array_values($exits);
+        return $this;
+    }
+
+    /**
+     * Ajoute une sortie ; ignorée si son dealId est déjà enregistré
+     * (idempotence vis-à-vis du cBot qui peut renvoyer un deal connu).
+     */
+    public function addExit(float $price, float $volume, ?string $dealId, ?string $date): self
+    {
+        $list = $this->getExits();
+        if ($dealId !== null) {
+            foreach ($list as $exit) {
+                if (($exit['dealId'] ?? null) === $dealId) {
+                    return $this;
+                }
+            }
+        }
+        $list[] = ['dealId' => $dealId, 'price' => $price, 'volume' => $volume, 'date' => $date];
+        $this->exits = $list;
+        return $this;
+    }
+
+    public function getExitedVolume(): float
+    {
+        return array_sum(array_map(static fn(array $exit) => (float) $exit['volume'], $this->getExits()));
+    }
+
+    public function isFullyExited(): bool
+    {
+        // Tolérance relative : les volumes broker sont des flottants (arrondis d'unités)
+        return $this->volumeInUnits !== null
+            && $this->volumeInUnits > 0
+            && $this->getExitedVolume() >= $this->volumeInUnits * 0.999;
+    }
+
+    /** Sens du trade : +1 achat, -1 vente (déduit de orderType). */
+    public function getDirection(): int
+    {
+        return str_starts_with((string) $this->orderType, 'sell') ? -1 : 1;
+    }
+
+    /** Distance de risque initiale (prix d'entrée ↔ SL initial), base du R. */
+    public function getInitialRiskDistance(): ?float
+    {
+        $initialStopLoss = $this->getInitialStopLoss();
+        if ($this->entryPrice === null || $initialStopLoss === null) {
+            return null;
+        }
+        $distance = abs($this->entryPrice - $initialStopLoss);
+        return $distance > 0.0 ? $distance : null;
+    }
+
+    /**
+     * RR initial = distance entrée→target / distance entrée→SL initial.
+     * Ne fait rien si les prix manquent ou si initialRR a été saisi (manuel prioritaire).
+     */
+    public function calculateInitialRR(): void
+    {
+        $riskDistance = $this->getInitialRiskDistance();
+        if ($this->initialRR !== null || $this->targetPrice === null || $riskDistance === null) {
+            return;
+        }
+        $this->initialRR = round(abs($this->targetPrice - $this->entryPrice) / $riskDistance, 2);
+    }
+
+    /**
+     * Fixe la date de sortie quand toutes les unités sont sorties
+     * (date de la dernière sortie, à défaut maintenant).
+     */
+    public function closeFromExits(): void
+    {
+        if ($this->exitDate !== null || !$this->isFullyExited()) {
+            return;
+        }
+        $exits = $this->getExits();
+        $lastDate = end($exits)['date'] ?? null;
+        try {
+            $this->exitDate = new \DateTime($lastDate ?? 'now');
+        } catch (\Exception) {
+            $this->exitDate = new \DateTime();
+        }
+    }
+
+    /**
+     * RR final = somme des R de chaque sortie pondérés par sa part du volume
+     * initial (le risque de référence reste toujours entrée→SL initial).
+     * Ne fait rien tant que le trade n'est pas clos, si les données manquent,
+     * ou si finalRR a été saisi (manuel prioritaire).
+     */
+    public function calculateFinalRR(): void
+    {
+        $riskDistance = $this->getInitialRiskDistance();
+        if ($this->finalRR !== null || $this->exitDate === null || $riskDistance === null
+            || $this->exits === null || $this->volumeInUnits === null || $this->volumeInUnits <= 0) {
+            return;
+        }
+
+        $direction = $this->getDirection();
+        $totalR = 0.0;
+        foreach ($this->getExits() as $exit) {
+            $exitR = $direction * ((float) $exit['price'] - $this->entryPrice) / $riskDistance;
+            $totalR += $exitR * ((float) $exit['volume'] / $this->volumeInUnits);
+        }
+        $this->finalRR = round($totalR, 2);
     }
 
     public function getScreenshotsByCategory(string $category): array

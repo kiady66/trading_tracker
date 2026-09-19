@@ -29,13 +29,23 @@ paramètre *API Base URL* par `http://localhost:8001`.
 
 À chaque **ouverture de position** : crée le trade via `POST /api/trades` avec
 l'asset (symbole cTrader converti, ex. `EURUSD` → `EUR/USD`), la date d'entrée,
-le risque calculé depuis la distance du SL, le RR initial, le SL courant et la
+le risque calculé depuis la distance du SL, le RR initial, le SL courant, les
+prix d'exécution (`entryPrice`, `targetPrice`, `volumeInUnits`) et la
 référence `ctraderPositionId` qui lie la position au trade.
 
 À chaque **modification de position** (SL/TP déplacé) : retrouve le trade par
 `ctraderPositionId` et le met à jour via `PATCH` — risque recalculé, RR, et le
 nouveau SL ajouté en fin d'historique `stopLosses` (l'API ignore un SL identique
 au dernier, pas de doublons). Un retrait de SL n'envoie rien.
+
+À chaque **clôture (partielle ou totale)** : une clôture partielle conserve la
+position (même Id, volume réduit) et chaque exécution crée un *deal* dans
+`History`. Sur `Positions.Modified` et `Positions.Closed`, le bot envoie à l'API
+les deals de clôture pas encore transmis (`exit: {dealId, price, volume, date}`) ;
+l'API dédoublonne par `dealId` (un redémarrage du bot est donc sans risque) et,
+à la clôture totale (`closed: true` ou volume initial atteint), fixe `exitDate`
+et calcule le `finalRR` pondéré par volume, rapporté au risque initial. Limite
+connue : une clôture survenue pendant que le bot est arrêté n'est pas rattrapée.
 
 Paramètres :
 
@@ -99,3 +109,9 @@ Quand le guard retire un SL, `TradingTrackerBot` voit une modification sans SL
 et n'envoie rien (le PATCH serait vide). Quand le guard restaure, le PATCH du
 tracker renvoie le même SL, que l'API déduplique. Les deux bots peuvent donc
 tourner ensemble sans se marcher dessus.
+
+## Références API cAlgo
+
+- [Position](https://help.ctrader.com/ctrader-algo/references/Trading/Positions/Position/) — `EntryPrice`, `TakeProfit`, `VolumeInUnits`, `Id`
+- [PositionClosedEventArgs](https://help.ctrader.com/ctrader-algo/references/EventArgs/PositionClosedEventArgs/) / [PositionModifiedEventArgs](https://help.ctrader.com/ctrader-algo/references/EventArgs/PositionModifiedEventArgs/) — la doc ne précise pas quel événement se déclenche sur une clôture partielle, d'où la synchronisation depuis `History` sur les deux
+- [History / HistoricalTrade](https://help.ctrader.com/ctrader-algo/references/Trading/History/HistoricalTrade/) — un deal de clôture par exécution : `PositionId`, `ClosingDealId`, `ClosingPrice`, `ClosingTime`, `VolumeInUnits`

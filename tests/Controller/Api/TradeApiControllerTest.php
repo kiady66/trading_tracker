@@ -604,4 +604,195 @@ class TradeApiControllerTest extends WebTestCase
 
         $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
     }
+
+    // =========================================================================
+    // Prix, sorties et calcul des RR (flux cBot cTrader)
+    // =========================================================================
+
+    /** Trade ouvert : achat à 1.1000, SL initial 1.0950 (risque 0.0050), 100 000 unités. */
+    private function makeOpenTradeWithPrices(): Trade
+    {
+        $trade = $this->makeTestTrade();
+        $trade->setEntryDate(new \DateTime('2024-06-03T09:30:00+00:00'));
+        $trade->setEntryPrice(1.1000);
+        $trade->addStopLoss(1.0950);
+        $trade->setVolumeInUnits(100000.0);
+
+        return $trade;
+    }
+
+    public function testCreerUnTradeAvecPrixCalculeLeRRInitial(): void
+    {
+        $client = $this->bootClient();
+
+        $client->request(
+            'POST',
+            '/api/trades',
+            [],
+            [],
+            $this->authHeaders(),
+            json_encode([
+                'asset'          => 'EUR/USD',
+                'orderType'      => 'buy market',
+                'riskPercentage' => 1.0,
+                'maxRiskEuro'    => 200.0,
+                'entryPrice'     => 1.1000,
+                'stopLoss'       => 1.0950,
+                'targetPrice'    => 1.1150,
+                'volumeInUnits'  => 100000,
+            ])
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        // Distance TP (0.0150) = 3 × distance SL (0.0050)
+        $this->assertEquals(3.0, $data['initialRR']);
+        $this->assertEquals(1.1000, $data['entryPrice']);
+        $this->assertEquals(1.1150, $data['targetPrice']);
+        $this->assertEquals(100000, $data['volumeInUnits']);
+    }
+
+    public function testCreerUnTradeAvecInitialRRManuelPrioritaireSurLesPrix(): void
+    {
+        $client = $this->bootClient();
+
+        $client->request(
+            'POST',
+            '/api/trades',
+            [],
+            [],
+            $this->authHeaders(),
+            json_encode([
+                'asset'          => 'EUR/USD',
+                'orderType'      => 'buy market',
+                'riskPercentage' => 1.0,
+                'maxRiskEuro'    => 200.0,
+                'initialRR'      => 2.5,
+                'entryPrice'     => 1.1000,
+                'stopLoss'       => 1.0950,
+                'targetPrice'    => 1.1150,
+            ])
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertEquals(2.5, $data['initialRR']);
+    }
+
+    public function testPatchSortieTotaleClotureEtCalculeLeRRFinal(): void
+    {
+        $client = $this->bootClient();
+
+        $this->mockRepoWithTrade($this->makeOpenTradeWithPrices(), 1);
+
+        $client->request(
+            'PATCH',
+            '/api/trades/1',
+            [],
+            [],
+            $this->authHeaders(),
+            json_encode([
+                'exit'   => ['dealId' => 'd1', 'price' => 1.1150, 'volume' => 100000, 'date' => '2024-06-04T15:00:00+00:00'],
+                'closed' => true,
+            ])
+        );
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertSame('closed', $data['status']);
+        $this->assertSame('2024-06-04T15:00:00+00:00', $data['exitDate']);
+        // Sortie à +3R sur tout le volume
+        $this->assertEquals(3.0, $data['finalRR']);
+        $this->assertEquals(3.0 * (1.5 / 100), $data['gainRR']);
+    }
+
+    public function testPatchSortiesPartiellesPondereesParLeVolumeInitial(): void
+    {
+        $client = $this->bootClient();
+        // Deux requêtes successives : garder le même kernel pour conserver les mocks
+        $client->disableReboot();
+
+        $trade = $this->makeOpenTradeWithPrices();
+        $this->mockRepoWithTrade($trade, 1);
+
+        // 50 % du volume à +1.5R
+        $client->request('PATCH', '/api/trades/1', [], [], $this->authHeaders(), json_encode([
+            'exit' => ['dealId' => 'd1', 'price' => 1.1075, 'volume' => 50000, 'date' => '2024-06-04T12:00:00+00:00'],
+        ]));
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertSame('open', $data['status']);
+        $this->assertNull($data['finalRR']);
+
+        // Les 50 % restants à +3R → clôture automatique (volume initial atteint)
+        $client->request('PATCH', '/api/trades/1', [], [], $this->authHeaders(), json_encode([
+            'exit' => ['dealId' => 'd2', 'price' => 1.1150, 'volume' => 50000, 'date' => '2024-06-04T15:00:00+00:00'],
+        ]));
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertSame('closed', $data['status']);
+        $this->assertSame('2024-06-04T15:00:00+00:00', $data['exitDate']);
+        // 0.5 × 1.5R + 0.5 × 3R = 2.25R, toujours rapporté au risque initial
+        $this->assertEquals(2.25, $data['finalRR']);
+        $this->assertCount(2, $data['exits']);
+    }
+
+    public function testPatchSortieAvecDealIdConnuEstIgnoree(): void
+    {
+        $client = $this->bootClient();
+
+        $trade = $this->makeOpenTradeWithPrices();
+        $trade->addExit(1.1075, 50000.0, 'd1', '2024-06-04T12:00:00+00:00');
+        $this->mockRepoWithTrade($trade, 1);
+
+        // Le cBot renvoie le même deal après un redémarrage
+        $client->request('PATCH', '/api/trades/1', [], [], $this->authHeaders(), json_encode([
+            'exit' => ['dealId' => 'd1', 'price' => 1.1075, 'volume' => 50000, 'date' => '2024-06-04T12:00:00+00:00'],
+        ]));
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertCount(1, $data['exits']);
+        $this->assertSame('open', $data['status']);
+    }
+
+    public function testPatchStopLossToucheSurUneVenteDonneRRFinalNegatif(): void
+    {
+        $client = $this->bootClient();
+
+        $trade = $this->makeTestTrade();
+        $trade->setOrderType('sell market');
+        $trade->setEntryDate(new \DateTime('2024-06-03T09:30:00+00:00'));
+        $trade->setEntryPrice(1.1000);
+        $trade->addStopLoss(1.1050);
+        $trade->setVolumeInUnits(100000.0);
+        $this->mockRepoWithTrade($trade, 1);
+
+        $client->request('PATCH', '/api/trades/1', [], [], $this->authHeaders(), json_encode([
+            'exit'   => ['dealId' => 'd1', 'price' => 1.1050, 'volume' => 100000, 'date' => '2024-06-04T15:00:00+00:00'],
+            'closed' => true,
+        ]));
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertEquals(-1.0, $data['finalRR']);
+    }
+
+    public function testPatchFinalRRManuelPrioritaireSurLesSorties(): void
+    {
+        $client = $this->bootClient();
+
+        $trade = $this->makeOpenTradeWithPrices();
+        $trade->setFinalRR(2.0);
+        $this->mockRepoWithTrade($trade, 1);
+
+        $client->request('PATCH', '/api/trades/1', [], [], $this->authHeaders(), json_encode([
+            'exit'   => ['dealId' => 'd1', 'price' => 1.1150, 'volume' => 100000, 'date' => '2024-06-04T15:00:00+00:00'],
+            'closed' => true,
+        ]));
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertEquals(2.0, $data['finalRR']);
+    }
 }

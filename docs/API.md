@@ -135,7 +135,19 @@ Content-Type: application/json
 | `noteErrors` | string\|null | Free text — mistakes noted |
 | `ctraderPositionId` | int\|null | cTrader position ID — used to link and retrieve the trade from the cBot |
 | `stopLoss` | number | **Append-only**: adds this price at the end of the `stopLosses` history (ignored if equal to the current last element). Sent by the cBots on every SL change |
-| `stopLosses` | number[]\|null | Full replacement of the stop loss history (manual edits). The last element is the current SL |
+| `stopLosses` | number[]\|null | Full replacement of the stop loss history (manual edits). The last element is the current SL; the first is the initial SL used for RR calculations |
+| `entryPrice` | number\|null | Fill price at execution |
+| `targetPrice` | number\|null | Take profit at execution (basis of the computed `initialRR`) |
+| `volumeInUnits` | number\|null | Opening volume in cTrader units (weighting basis for partial exits) |
+| `exit` | object\|null | **Append-only**: one closing deal `{dealId, price, volume, date}`. Idempotent — an already-known `dealId` is ignored |
+| `exits` | object[]\|null | Full replacement of the exits list (manual edits) |
+| `closed` | bool | `true` closes the trade: sets `exitDate` from the last exit (or now) if not already set |
+
+**Server-side RR calculations** (never overwrite a manually provided value):
+`initialRR` = target distance ÷ initial risk distance (entry ↔ first `stopLosses` entry).
+On close (`closed: true`, or cumulated exit volume ≥ `volumeInUnits`), `finalRR` =
+Σ over exits of (exit volume ÷ `volumeInUnits`) × signed R of that exit — each exit's R
+is always measured against the *initial* risk distance, negative on a loss.
 
 **Example request**
 
