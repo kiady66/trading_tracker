@@ -21,6 +21,7 @@ use Symfony\Component\Process\Process;
 class GenerateDailyNewsCommand extends Command
 {
     private const CLAUDE_TIMEOUT = 900;
+    private const RETENTION_DAYS = 14;
 
     private const PROMPT_TEMPLATE = <<<'PROMPT'
 Tu es un rédacteur financier factuel. Rédige le wrap des news de marché du %DATE_LONG% (date du jour : %DATE%).
@@ -132,6 +133,15 @@ PROMPT;
         $news->setContentHtml($html);
         $news->setGeneratedAt(new \DateTimeImmutable());
         $this->entityManager->flush();
+
+        // Rétention : cutoff relatif à la date du wrap (pas à aujourd'hui) pour
+        // ne jamais supprimer une news qu'on vient de régénérer via --date.
+        $deleted = $this->dailyNewsRepository->deleteOlderThan(
+            $date->modify(sprintf('-%d days', self::RETENTION_DAYS))
+        );
+        if ($deleted > 0) {
+            $io->text(sprintf('%d news de plus de %d jours supprimée(s).', $deleted, self::RETENTION_DAYS));
+        }
 
         $io->success(sprintf(
             'Wrap du %s %s (%d caractères).',

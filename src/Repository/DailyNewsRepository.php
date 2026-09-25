@@ -40,6 +40,21 @@ class DailyNewsRepository extends ServiceEntityRepository
     }
 
     /**
+     * Supprime les news strictement antérieures à la date donnée.
+     *
+     * @return int nombre de news supprimées
+     */
+    public function deleteOlderThan(\DateTimeImmutable $cutoff): int
+    {
+        return $this->createQueryBuilder('n')
+            ->delete()
+            ->andWhere('n.date < :cutoff')
+            ->setParameter('cutoff', $cutoff->format('Y-m-d'))
+            ->getQuery()
+            ->execute();
+    }
+
+    /**
      * @return \DateTimeImmutable[] dates ayant une news, ordre croissant
      */
     public function findAvailableDates(): array
