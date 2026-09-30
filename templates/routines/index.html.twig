@@ -1,0 +1,448 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Routines - Trading Tracker{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* Un accent par famille de routine (--c) et sa version pastel (--cs) */
+        .rt-wrap {
+            --wk: #6d4ae0; --wk-soft: #efeafd;
+            --am: #d98a00; --am-soft: #fdf3e1;
+            --pm: #3656c9; --pm-soft: #e8edfb;
+            --al: #138a5b; --al-soft: #e3f5ed;
+            --nw: #d0413a; --nw-soft: #fce9e8;
+            --ref: #4a5568; --ref-soft: #eceef2;
+            --card-shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+            max-width: 920px;
+            margin: 0 auto;
+        }
+
+        .rt-header { margin-bottom: 1rem; }
+        .rt-header p { margin: 0; color: var(--text-muted); font-size: 0.9rem; max-width: 70ch; }
+
+        .rt-golden {
+            margin: 1rem 0 1.25rem;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            background: #fff;
+            border: 1px solid var(--border);
+            box-shadow: var(--card-shadow);
+            font-weight: 600;
+        }
+        .rt-golden span { color: var(--al); }
+
+        /* ── Onglets ── */
+        .rt-nav {
+            display: flex; gap: 0.5rem; flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+            position: sticky; top: 65px; z-index: 5;
+            background: #f1f5f9;
+            padding: 0.6rem 0;
+        }
+        .rt-nav button {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.55rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: #fff;
+            color: var(--text-main);
+            font: inherit; font-weight: 600; font-size: 0.9rem;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+        .rt-nav button i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .rt-nav button.on { color: #fff; border-color: transparent; }
+        .rt-nav button.on i { background: rgba(255,255,255,.7) !important; }
+        .rt-nav button[data-routines-tab-param="wk"].on  { background: var(--wk); }
+        .rt-nav button[data-routines-tab-param="day"].on { background: var(--pm); }
+        .rt-nav button[data-routines-tab-param="al"].on  { background: var(--al); }
+        .rt-nav button[data-routines-tab-param="nw"].on  { background: var(--nw); }
+        .rt-nav button[data-routines-tab-param="ref"].on { background: var(--ref); }
+
+        .rt-tab { display: none; }
+        .rt-tab.on { display: block; }
+
+        .rt-tabhead {
+            display: flex; justify-content: space-between; align-items: flex-end; gap: 0.75rem;
+            margin: 0 0 0.9rem; flex-wrap: wrap;
+        }
+        .rt-tabhead h2 { margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--primary); }
+        .rt-tabhead small { color: var(--text-muted); }
+
+        .rt-reset {
+            border: 1px solid var(--border); background: #fff; color: var(--text-muted);
+            font: inherit; font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 8px; cursor: pointer;
+        }
+        .rt-reset:hover { color: var(--text-main); }
+
+        /* ── Cartes ── */
+        .rt-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--c);
+            border-radius: 14px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        .rt-card-h {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.85rem 1.1rem;
+            background: var(--cs);
+        }
+        .rt-card-h h3 { margin: 0; font-size: 1rem; font-weight: 600; flex: 1; }
+        .rt-badge {
+            font-size: 0.75rem; font-weight: 700; color: var(--c);
+            background: #fff; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+        }
+        .rt-prog { width: 90px; height: 6px; border-radius: 9px; background: var(--border); overflow: hidden; flex-shrink: 0; }
+        .rt-prog b { display: block; height: 100%; width: 0; background: var(--c); transition: width .25s; }
+        .rt-cnt { font-size: 0.75rem; color: var(--text-muted); min-width: 34px; text-align: right; }
+        .rt-card-b { padding: 0.4rem 1.1rem 0.9rem; }
+        .rt-card-b > p { margin: 0.5rem 0; color: var(--text-muted); font-size: 0.9rem; }
+
+        .wk  { --c: var(--wk);  --cs: var(--wk-soft); }
+        .am  { --c: var(--am);  --cs: var(--am-soft); }
+        .pm  { --c: var(--pm);  --cs: var(--pm-soft); }
+        .al  { --c: var(--al);  --cs: var(--al-soft); }
+        .nw  { --c: var(--nw);  --cs: var(--nw-soft); }
+        .ref { --c: var(--ref); --cs: var(--ref-soft); }
+
+        /* ── Cases à cocher ── */
+        .rt-item {
+            display: flex; gap: 0.75rem; align-items: flex-start;
+            padding: 0.55rem 0; margin: 0;
+            border-bottom: 1px dashed var(--border);
+            cursor: pointer;
+        }
+        .rt-item:last-of-type { border-bottom: 0; }
+        .rt-item input {
+            appearance: none; flex-shrink: 0;
+            width: 20px; height: 20px; margin-top: 1px;
+            border-radius: 6px; border: 2px solid var(--c);
+            cursor: pointer; display: grid; place-items: center; transition: .15s;
+        }
+        .rt-item input:checked { background: var(--c); }
+        .rt-item input:checked::after {
+            content: ""; width: 5px; height: 10px;
+            border: solid #fff; border-width: 0 2.5px 2.5px 0;
+            transform: rotate(45deg) translate(-1px, -1px);
+        }
+        .rt-item input:checked + span { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--border); }
+        .rt-item em { font-style: normal; display: block; color: var(--text-muted); font-size: 0.85rem; margin-top: 2px; }
+        .rt-item input:checked + span em { text-decoration: none; }
+
+        .rt-done { display: none; margin-top: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 8px; background: var(--cs); color: var(--c); font-weight: 600; font-size: 0.9rem; }
+        .rt-card.complete .rt-done { display: block; }
+
+        .rt-tip { margin: 0.6rem 0 0.15rem; padding: 0.6rem 0.75rem; border-radius: 10px; background: var(--cs); font-size: 0.9rem; }
+        .rt-tip strong { color: var(--c); }
+        .rt-stop {
+            margin: 0.75rem 0 0; padding: 0.6rem 0.75rem; border-radius: 10px;
+            border: 1.5px solid var(--nw); color: var(--nw); font-weight: 600; font-size: 0.9rem;
+        }
+
+        /* ── Tableaux ── */
+        .rt-table-wrap { overflow-x: auto; margin: 0.4rem 0 0.25rem; }
+        .rt-table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 560px; }
+        .rt-table-wrap th, .rt-table-wrap td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .rt-table-wrap th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); font-weight: 500; }
+        .rt-table-wrap code {
+            font-size: 0.8rem; color: var(--text-main);
+            background: var(--ref-soft); padding: 2px 6px; border-radius: 5px; white-space: nowrap;
+        }
+
+        .rt-pairs input, .rt-pairs select {
+            width: 100%; font: inherit; font-size: 0.85rem;
+            border: 1px solid var(--border); border-radius: 7px;
+            background: #f8fafc; color: var(--text-main); padding: 0.35rem 0.5rem;
+        }
+        .rt-pairs input:focus-visible, .rt-pairs select:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+        /* ── Mémo ── */
+        .rt-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin: 0.6rem 0; }
+        .rt-step { border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 0.9rem; background: #f8fafc; }
+        .rt-step .n {
+            display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+            color: #fff; font-weight: 700; font-size: 0.8rem; margin-bottom: 0.4rem;
+        }
+        .rt-step h4 { margin: 0 0 0.25rem; font-size: 0.95rem; font-weight: 600; }
+        .rt-step p { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+
+        .rt-timeline { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        @media (max-width: 640px) {
+            .rt-timeline { grid-template-columns: 1fr; }
+            .rt-card-h { flex-wrap: wrap; }
+            .rt-prog { width: 60px; }
+        }
+        @media (max-width: 768px) { .rt-nav { position: static; } }
+
+        .rt-note { color: var(--text-muted); font-size: 0.85rem; margin-top: 1.75rem; text-align: center; }
+
+        @media print {
+            .app-navbar, .rt-nav, .rt-reset { display: none; }
+            .rt-tab { display: block !important; page-break-after: always; }
+            .rt-card { break-inside: avoid; }
+        }
+    </style>
+{% endblock %}
+
+{% macro item(text, hint = null) %}
+    <label class="rt-item"><input type="checkbox"><span>{{ text }}{% if hint %}<em>{{ hint }}</em>{% endif %}</span></label>
+{% endmacro %}
+
+{% macro card_head(badge, title, checkable = true) %}
+    <div class="rt-card-h">
+        <span class="rt-badge">{{ badge }}</span>
+        <h3>{{ title }}</h3>
+        {% if checkable %}<div class="rt-prog"><b></b></div><span class="rt-cnt"></span>{% endif %}
+    </div>
+{% endmacro %}
+
+{% import _self as rt %}
+
+{% block body %}
+    <div class="rt-wrap" data-controller="routines" data-action="change->routines#cardChanged">
+
+        <div class="rt-header">
+            <h1 class="h4 mb-1"><i class="bi bi-check2-square me-2"></i>Routines Swing FX</h1>
+            <p>Fonda pour la direction et l'objectif, technique pour l'entrée. Le week-end, on prépare. En semaine, on réagit aux alertes.</p>
+        </div>
+
+        <div class="rt-golden">Règle d'or : <span>pas d'alerte = pas de graphique.</span></div>
+
+        <nav class="rt-nav" aria-label="Routines">
+            <button type="button" data-routines-target="tabButton" data-action="routines#showTab" data-routines-tab-param="wk"><i style="background:var(--wk)"></i>Weekend</button>
+            <button type="button" data-routines-target="tabButton" data-action="routines#showTab" data-routines-tab-param="day"><i style="background:var(--pm)"></i>Journalière</button>
+            <button type="button" data-routines-target="tabButton" data-action="routines#showTab" data-routines-tab-param="al"><i style="background:var(--al)"></i>Alerte reçue</button>
+            <button type="button" data-routines-target="tabButton" data-action="routines#showTab" data-routines-tab-param="nw"><i style="background:var(--nw)"></i>Annonce</button>
+            <button type="button" data-routines-target="tabButton" data-action="routines#showTab" data-routines-tab-param="ref"><i style="background:var(--ref)"></i>Mémo alertes</button>
+        </nav>
+
+        {# ============ WEEKEND ============ #}
+        <section class="rt-tab" id="wk" data-routines-target="tab">
+            <div class="rt-tabhead">
+                <div><h2>Préparation du week-end</h2><small>45 à 60 min · samedi ou dimanche</small></div>
+                <button type="button" class="rt-reset" data-action="routines#resetTab">Tout décocher</button>
+            </div>
+
+            <div class="rt-card wk" data-routines-target="card">
+                {{ rt.card_head('1 · 15-20 min', 'Fondamentaux') }}
+                <div class="rt-card-b">
+                    {{ rt.item('Biais de chaque devise : forte, faible ou neutre', 'Banque centrale, données récentes, risk-on / risk-off') }}
+                    {{ rt.item('Sélectionner 3 à 6 paires maximum', 'Toujours une devise forte contre une faible') }}
+                    {{ rt.item('Écrire le scénario de chaque paire', 'Impulsion attendue ou trade long terme ?') }}
+                    {{ rt.item("Définir l'objectif de prix fondamental") }}
+                    {{ rt.item('Noter ce qui invaliderait la thèse') }}
+                    {{ rt.item('Calendrier de la semaine : noter les annonces clés', 'Repérer celles qui tombent la nuit (RBA, RBNZ, BoJ, Chine…)') }}
+                    <div class="rt-done">Direction claire pour la semaine ✓</div>
+                </div>
+            </div>
+
+            <div class="rt-card wk">
+                {{ rt.card_head('Fiche', 'Mes paires de la semaine', false) }}
+                <div class="rt-card-b rt-pairs">
+                    <div class="rt-table-wrap"><table>
+                        <thead><tr><th style="width:14%">Paire</th><th style="width:14%">Sens</th><th>Scénario</th><th style="width:16%">Objectif</th><th>Invalidation</th></tr></thead>
+                        <tbody>
+                            {% set examples = [
+                                {pair: 'EURNZD', scenario: 'Impulsion après RBNZ dovish', target: '1.9450', invalidation: 'Clôture daily sous 1.9050'},
+                                {pair: 'GBPJPY'},
+                            ] %}
+                            {% for i in 0..5 %}
+                                {% set ex = examples[i] ?? {} %}
+                                <tr>
+                                    <td><input type="text" placeholder="{{ ex.pair ?? '' }}" aria-label="Paire {{ i + 1 }}"></td>
+                                    <td><select aria-label="Sens paire {{ i + 1 }}"><option>—</option><option>Long</option><option>Short</option></select></td>
+                                    <td><input type="text" placeholder="{{ ex.scenario ?? '' }}" aria-label="Scénario paire {{ i + 1 }}"></td>
+                                    <td><input type="text" placeholder="{{ ex.target ?? '' }}" aria-label="Objectif paire {{ i + 1 }}"></td>
+                                    <td><input type="text" placeholder="{{ ex.invalidation ?? '' }}" aria-label="Invalidation paire {{ i + 1 }}"></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table></div>
+                    <div class="rt-tip"><strong>Astuce :</strong> les champs ne sont pas sauvegardés. Recopie ta fiche dans ton journal ou fais une capture.</div>
+                </div>
+            </div>
+
+            <div class="rt-card wk" data-routines-target="card">
+                {{ rt.card_head('2 · 20-30 min', 'Technique') }}
+                <div class="rt-card-b">
+                    {{ rt.item('Tracer les zones de support / résistance en weekly et daily') }}
+                    {{ rt.item('Placer le Fibonacci sur la dernière impulsion', 'Chercher la superposition 0.5 à 0.618 avec la zone') }}
+                    {{ rt.item("Délimiter la zone d'entrée (zone + Fibo)") }}
+                    {{ rt.item('Écrire le déclencheur attendu', 'Ex. : cassure de la counter trend line en H4') }}
+                    {{ rt.item("Vérifier le ratio risque / rendement vers l'objectif (≥ 1:2)") }}
+                    <div class="rt-done">Zones prêtes ✓</div>
+                </div>
+            </div>
+
+            <div class="rt-card wk" data-routines-target="card">
+                {{ rt.card_head('3 · 10 min', 'Alertes TradingView') }}
+                <div class="rt-card-b">
+                    {{ rt.item('Alerte 1 « Approche » juste avant chaque zone', 'Ligne horizontale · Crossing · Only once') }}
+                    {{ rt.item('Alerte 3 « Invalidation » au-delà de chaque zone', 'Ligne horizontale · Once per bar close') }}
+                    {{ rt.item('Positions ouvertes : alerte à 50 % du chemin vers le TP', 'Message : « SL au breakeven ou partiel »') }}
+                    {{ rt.item("Chaque message contient l'action à faire") }}
+                    {{ rt.item('Supprimer les alertes des paires abandonnées') }}
+                    <div class="rt-done">Tout est armé. Tu peux fermer TradingView ✓</div>
+                </div>
+            </div>
+        </section>
+
+        {# ============ JOURNALIÈRE ============ #}
+        <section class="rt-tab" id="day" data-routines-target="tab">
+            <div class="rt-tabhead">
+                <div><h2>Routine journalière</h2><small>5 à 10 min au total · du lundi au vendredi</small></div>
+                <button type="button" class="rt-reset" data-action="routines#resetTab">Tout décocher</button>
+            </div>
+
+            <div class="rt-card am" data-routines-target="card">
+                {{ rt.card_head('☀ Matin · 5 min', 'Avant le travail') }}
+                <div class="rt-card-b">
+                    {{ rt.item("Lire les notifications d'alertes de la nuit", 'Aucune alerte → aucun graphique à ouvrir') }}
+                    {{ rt.item('Vérifier que les positions ont toujours leur SL et TP') }}
+                    {{ rt.item('Calendrier du jour et de la nuit', "Une annonce sur une devise en position ? → voir l'onglet Annonce") }}
+                    {{ rt.item('Remettre le SL normal si reculé hier soir') }}
+                    <div class="rt-done">Place au code ✓</div>
+                </div>
+            </div>
+
+            <div class="rt-card pm" data-routines-target="card">
+                {{ rt.card_head('☾ Soir · 5 min', 'Avant de dormir') }}
+                <div class="rt-card-b">
+                    {{ rt.item('Chaque position a un SL et un TP côté serveur', "Pas de trailing MT4 ni d'EA sans VPS") }}
+                    {{ rt.item('Crosses à fort spread : SL reculé pour le rollover', "23h Paris (22h pendant les semaines de décalage d'heure). Reculer au lieu de retirer.") }}
+                    {{ rt.item('Annonce de nuit sur une devise en position ?', 'Réduire 30-50 %, SL au breakeven, ou stop garanti') }}
+                    {{ rt.item("Je peux accepter de me réveiller stoppé") }}
+                    {{ rt.item("Alertes à jour (supprimer celles qui n'ont plus de sens)") }}
+                    <div class="rt-done">Bonne nuit ✓</div>
+                    <div class="rt-stop">Si tu hésites à dormir à cause d'une position, elle est trop grosse.</div>
+                </div>
+            </div>
+        </section>
+
+        {# ============ ALERTE ============ #}
+        <section class="rt-tab" id="al" data-routines-target="tab">
+            <div class="rt-tabhead">
+                <div><h2>Une alerte a sonné</h2><small>La seule raison d'ouvrir un graphique en semaine</small></div>
+                <button type="button" class="rt-reset" data-action="routines#resetTab">Tout décocher</button>
+            </div>
+
+            <div class="rt-card al" data-routines-target="card">
+                {{ rt.card_head('Alerte 1', 'Le prix approche de la zone') }}
+                <div class="rt-card-b">
+                    {{ rt.item('Passer en H4 et tracer la counter trend line') }}
+                    {{ rt.item("Poser l'alerte 2 sur la TL", 'Graphique affiché en H4 · Once per bar close') }}
+                    {{ rt.item('Refermer TradingView') }}
+                    <div class="rt-done">En attente du déclencheur ✓</div>
+                </div>
+            </div>
+
+            <div class="rt-card al" data-routines-target="card">
+                {{ rt.card_head('Alerte 2', "Checklist d'entrée") }}
+                <div class="rt-card-b">
+                    {{ rt.item('Le biais fondamental est toujours valable') }}
+                    {{ rt.item('Confluence complète : zone + Fibo + cassure de TL clôturée') }}
+                    {{ rt.item("Risque / rendement ≥ 1:2 vers l'objectif fondamental") }}
+                    {{ rt.item("Pas d'annonce ni de rollover gênants à court terme") }}
+                    {{ rt.item('Taille calculée selon le risque max') }}
+                    {{ rt.item('Ordre passé avec SL et TP') }}
+                    {{ rt.item("Supprimer les alertes d'entrée, poser les alertes de gestion") }}
+                    {{ rt.item('Noter le trade dans le journal') }}
+                    <div class="rt-done">Trade en place, on n'y touche plus ✓</div>
+                    <div class="rt-stop">Un seul point manquant → pas de trade. On réarme ou on attend.</div>
+                </div>
+            </div>
+
+            <div class="rt-card nw" data-routines-target="card">
+                {{ rt.card_head('Alerte 3', 'Zone invalidée') }}
+                <div class="rt-card-b">
+                    {{ rt.item('Setup annulé : supprimer toutes les alertes de la paire') }}
+                    {{ rt.item("Noter ce qui s'est passé (utile pour le week-end)") }}
+                    <div class="rt-done">Nettoyé ✓</div>
+                </div>
+            </div>
+        </section>
+
+        {# ============ ANNONCE ============ #}
+        <section class="rt-tab" id="nw" data-routines-target="tab">
+            <div class="rt-tabhead">
+                <div><h2>Changement de direction après une annonce</h2><small>Protéger tout de suite, analyser le soir</small></div>
+                <button type="button" class="rt-reset" data-action="routines#resetTab">Tout décocher</button>
+            </div>
+
+            <div class="rt-timeline">
+                <div class="rt-card nw" data-routines-target="card">
+                    {{ rt.card_head('⚡ Tout de suite · 5 min', 'Protéger') }}
+                    <div class="rt-card-b">
+                        {{ rt.item('Position contre la thèse ?', "Réduire, rapprocher le SL, ou sortir si l'invalidation est claire") }}
+                        {{ rt.item("Mettre en pause les alertes d'entrée sur cette devise") }}
+                        {{ rt.item('Ne pas entrer sur la première réaction') }}
+                        {{ rt.item('Retourner coder') }}
+                        <div class="rt-done">Risque maîtrisé ✓</div>
+                    </div>
+                </div>
+                <div class="rt-card pm" data-routines-target="card">
+                    {{ rt.card_head('☾ Après clôture NY · 15-20 min', 'Réanalyser') }}
+                    <div class="rt-card-b">
+                        {{ rt.item('La bougie daily a-t-elle confirmé le mouvement ?') }}
+                        {{ rt.item('Lire les réactions et les anticipations de taux') }}
+                        {{ rt.item('Vrai changement de biais ou surprise ponctuelle ?') }}
+                        {{ rt.item('Mettre à jour la liste de paires (retirer / ajouter)') }}
+                        {{ rt.item('Nouvelles zones, objectifs et alertes (structure 1-2-3)') }}
+                        <div class="rt-done">Plan mis à jour ✓</div>
+                    </div>
+                </div>
+            </div>
+            <div class="rt-tip nw"><strong>Exception :</strong> même face à un changement de ton très clair d'une banque centrale, attendre au minimum la clôture H4 ou un premier retracement. En swing, quelques heures d'attente ne coûtent rien.</div>
+        </section>
+
+        {# ============ MÉMO ============ #}
+        <section class="rt-tab" id="ref" data-routines-target="tab">
+            <div class="rt-tabhead">
+                <div><h2>Mémo : les alertes en 3 étapes</h2><small>Référence rapide pour TradingView</small></div>
+            </div>
+
+            <div class="rt-card ref">
+                {{ rt.card_head('Structure', 'Par paire suivie', false) }}
+                <div class="rt-card-b">
+                    <div class="rt-steps">
+                        <div class="rt-step"><span class="n" style="background:var(--am)">1</span><h4>Approche</h4><p>Juste avant la zone. Posée le week-end. Te dit de tracer la TL.</p></div>
+                        <div class="rt-step"><span class="n" style="background:var(--al)">2</span><h4>Déclencheur</h4><p>Sur la counter TL. Posée seulement après l'alerte 1. Te dit de faire la checklist.</p></div>
+                        <div class="rt-step"><span class="n" style="background:var(--nw)">3</span><h4>Invalidation</h4><p>Au-delà de la zone. Posée le week-end. Te dit d'annuler le setup.</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rt-card ref">
+                {{ rt.card_head('Réglages', 'Paramètres et messages types', false) }}
+                <div class="rt-card-b">
+                    <div class="rt-table-wrap"><table>
+                        <thead><tr><th>Alerte</th><th>Outil</th><th>Fréquence</th><th>Message</th></tr></thead>
+                        <tbody>
+                            <tr><td><b style="color:var(--am)">1 · Approche</b></td><td>Ligne horizontale</td><td>Only once</td><td><code>EURNZD – Zone D1 → tracer TL H4</code></td></tr>
+                            <tr><td><b style="color:var(--al)">2 · Déclencheur</b></td><td>Trend line</td><td>Once per bar close</td><td><code>EURNZD – Cassure TL H4 → checklist</code></td></tr>
+                            <tr><td><b style="color:var(--nw)">3 · Invalidation</b></td><td>Ligne horizontale</td><td>Once per bar close</td><td><code>EURNZD – Zone cassée → annuler</code></td></tr>
+                            <tr><td><b style="color:var(--pm)">Gestion</b></td><td>Ligne horizontale</td><td>Only once</td><td><code>EURNZD – 50 % TP → SL BE / partiel</code></td></tr>
+                        </tbody>
+                    </table></div>
+                    <div class="rt-tip"><strong>À retenir :</strong> crée l'alerte de cassure avec le graphique affiché sur ton unité de temps d'entrée (H4), c'est elle qui sert à évaluer la clôture.</div>
+                </div>
+            </div>
+
+            <div class="rt-card ref">
+                {{ rt.card_head('Rappels', 'Nuit et rollover', false) }}
+                <div class="rt-card-b">
+                    <p>• Rollover : 23h Paris (22h pendant les 2-3 semaines de décalage des changements d'heure). Spread normal vers 00h15-00h30.</p>
+                    <p>• Sur les crosses à fort spread : reculer le SL de l'écartement max observé + une marge, ne pas le retirer.</p>
+                    <p>• SL et TP fixes = côté serveur. Trailing MT4 et EA = terminal ouvert ou VPS.</p>
+                    <p>• Sur un short, le stop se déclenche sur l'ask : c'est lui qui s'envole au rollover.</p>
+                </div>
+            </div>
+        </section>
+
+        <p class="rt-note">Les cases se réinitialisent à la fermeture de la page.</p>
+    </div>
+{% endblock %}

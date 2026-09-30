@@ -103,6 +103,7 @@ src/
 │   ├── TradeController.php        core CRUD
 │   ├── StatsController.php        analytics dashboard (/stats)
 │   ├── CyclesController.php       central-bank rate cycles clock (/cycles)
+│   ├── RoutinesController.php     static swing-FX routine checklists (/routines)
 │   ├── ChatController.php         support chat (/chat)
 │   ├── NewsController.php         daily news (/news)
 │   ├── SecurityController.php     form login/register
@@ -197,6 +198,7 @@ P&L time series), `getConfluenceStats()`, `getDayStats()`. All accept a
 | `/trade`, `/trade/new`, `/trade/{id}`, `/trade/{id}/edit` | Trade CRUD |
 | `/stats` | Analytics dashboard |
 | `/cycles` | Central-bank rate cycles clock |
+| `/routines` | Swing-FX routine checklists (static, state lives in the browser) |
 | `/chat` | Support chat (admin side under `Controller/Admin/`) |
 | `/news` | Daily news |
 | `/trade-type`, `/trend`, `/confluence`, `/timeframe`, `/trade-error` | Reference-entity CRUD |
