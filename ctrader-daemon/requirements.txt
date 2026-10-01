@@ -6,3 +6,8 @@ pyOpenSSL>=26
 # Vérification TLS stricte du hostname par Twisted (sinon simple warning et
 # vérification « rudimentaire » — inacceptable pour une API de trading).
 service_identity
+# Appels REST vers l'API Trading Tracker (exécutés dans le threadpool Twisted).
+requests
+# Fuseau America/New_York pour le rollover guard (les images slim n'embarquent
+# pas la base IANA système).
+tzdata

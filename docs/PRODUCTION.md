@@ -27,6 +27,7 @@ flowchart LR
             NGINX["nginx:alpine<br/>:80 → 301 https<br/>:443 ssl"]
             APP["app (php-fpm)<br/>build ./Dockerfile"]
             DB[("postgres:16-alpine<br/>db trading_data")]
+            DAEMON["ctrader-daemon<br/>(python, Open API)"]
         end
         CERT["/etc/letsencrypt<br/>(certbot sur l'hôte)"]
     end
@@ -39,6 +40,8 @@ flowchart LR
     B -- "img src SCREENSHOTS_BASE_URL" --> R2
     LE -- "renouvellement auto<br/>(webroot ./public)" --> CERT
     CERT -. "monté ro dans nginx" .-> NGINX
+    DAEMON -- "événements du compte<br/>(TCP+SSL live.ctraderapi.com:5035)" --> Internet
+    DAEMON -- "POST/PATCH /api/trades<br/>(URL publique)" --> NGINX
 ```
 
 ## Environnements
@@ -115,6 +118,12 @@ Points clés :
   le `public/` de l'hôte, où nginx les sert directement.
 - `var/` vit dans le volume nommé `app_var` : **le cache Twig compilé survit aux
   rebuilds**. D'où le piège ci-dessous.
+- Le service `ctrader-daemon` ([ctrader-daemon/README.md](../ctrader-daemon/README.md))
+  suit le compte de trading via la cTrader Open API et alimente `/api/trades` par
+  l'URL publique. Ses tokens OAuth rafraîchis vivent dans le volume `ctrader_tokens`,
+  sa config dans le `.env` du droplet (clés `CTRADER_*`, `TRADING_TRACKER_API_*`,
+  `GUARD_ENABLED`). `make deploy` le rebuilde avec `app` ; logs :
+  `make prod-daemon-logs`.
 
 ## Déployer un changement
 
@@ -159,6 +168,7 @@ Autres cibles prod du Makefile (`make help` pour la liste complète) :
 | `make prod-ps` / `make prod-logs` | état / logs des conteneurs |
 | `make prod-shell` | shell dans le conteneur app |
 | `make prod-console CMD="..."` | commande `bin/console` arbitraire en prod |
+| `make prod-daemon-logs` | logs du démon cTrader (`ctrader-daemon`) |
 | `make prod-snapshot` | dump SQL de la base de prod dans `snapshots/` (jamais commité) |
 
 Les builds prennent plusieurs minutes (1 vCPU + swap) — c'est normal.
@@ -210,6 +220,7 @@ Le `.env` prod vit sur le droplet (`chmod 600`, **jamais commité** — le
 | `SCREENSHOTS_BASE_URL` | URL publique `*.r2.dev` du bucket, injectée comme global Twig |
 | `CLAUDE_CODE_OAUTH_TOKEN` | auth headless de Claude Code pour `app:news:generate` (généré via `claude setup-token`) |
 | `SENTRY_DSN` | monitoring d'erreurs Sentry (plan gratuit, alertes email) — vide = désactivé ; DSN du projet sur sentry.io → Settings → Client Keys |
+| `CTRADER_*`, `TRADING_TRACKER_API_*`, `MAX_RISK_EURO`, `GUARD_ENABLED` | démon cTrader — voir [ctrader-daemon/README.md](../ctrader-daemon/README.md) |
 
 Le [Dockerfile](../Dockerfile) écrit un `.env` **stub** (valeurs factices) dans
 l'image, uniquement pour que `composer install` et `importmap:install` passent au

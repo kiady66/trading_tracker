@@ -1,5 +1,11 @@
 # cBots cTrader — Trading Tracker
 
+> ⚠ **Solution de secours locale.** Le suivi du compte est assuré en prod par le
+> démon [`ctrader-daemon/`](../ctrader-daemon/README.md) (cTrader Open API),
+> qui tourne sur le droplet 24/7. Ces cBots restent utilisables **en local
+> uniquement** (bouton *play*, cTrader Desktop allumé) si le démon est arrêté.
+> Ne pas faire tourner le guard des deux côtés en même temps.
+
 Deux robots cTrader qui relient le compte de trading à l'application via
 l'[API REST](../docs/API.md) (`/api/trades`), authentifiés par le token
 personnel (**Mon profil → Token API cTrader**).
@@ -25,14 +31,15 @@ paramètre *API Base URL* par `http://localhost:8001`.
 > après une mise à jour du code, vérifier que l'URL et le token de l'instance
 > sont corrects.
 
-### Exécution cloud (gratuite)
+### ⚠ Exécution cloud impossible
 
-Les deux bots utilisent `AccessRights.None` et l'API `Http` de cAlgo (et non
-`System.Net.Http`), ce qui les rend éligibles à
-l'[exécution cloud de cTrader](https://help.ctrader.com/ctrader-algo/documentation/cloud-features/) :
-gratuite, jusqu'à 10 instances simultanées sur un compte live (1 seule sur un
-compte démo, limitée à 7 jours). Démarrer l'instance avec le bouton *cloud*
-au lieu de *play* — plus besoin de laisser cTrader Desktop allumé.
+Les bots compilent et démarrent en instance cloud (`AccessRights.None` + API
+`Http` de cAlgo), **mais l'exécution cloud de cTrader bloque toute requête HTTP
+sortante** (["No HTTP requests are sent"](https://help.ctrader.com/ctrader-algo/documentation/cloud-features/cloud-execution/)) :
+les appels échouent silencieusement et aucun trade n'atteint l'API (constaté en
+prod le 29/09/2026). Seul le WebSocket vers le port 25345 est autorisé — inutilisable
+ici. **Lancer les bots uniquement en local (bouton *play*)** ; c'est précisément la
+limite qui a motivé le démon Open API.
 
 ## TradingTrackerBot
 

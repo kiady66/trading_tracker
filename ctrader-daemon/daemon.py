@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Démon Trading Tracker ↔ cTrader Open API.
 
-Phase 1 (squelette) : connexion TCP+SSL, authentification application + compte,
-keepalive (géré par le SDK), rafraîchissement automatique des tokens et
-journalisation de tous les événements reçus du compte.
+Connexion TCP+SSL, authentification application + compte, keepalive (géré par
+le SDK), rafraîchissement automatique des tokens, puis :
+- tracker (tracker.py)  : réplique les trades du compte dans Trading Tracker ;
+- rollover guard (guard.py) : retire/restaure les SL autour de 17h00 New York
+  (désactivé par défaut — GUARD_ENABLED).
 
 GARDE-FOU FINANCIER : ce démon ne passe JAMAIS d'ordre. Aucune requête
-d'ouverture, de clôture ou de modification de volume n'est implémentée, dans
-aucune phase. La seule écriture broker autorisée (phase 3, rollover guard)
-sera ProtoOAAmendPositionSLTPReq.
+d'ouverture, de clôture ou de modification de volume n'est implémentée. La
+seule écriture broker est l'amendement de SL du rollover guard
+(ProtoOAAmendPositionSLTPReq).
 """
 
 import json
@@ -23,13 +25,17 @@ from ctrader_open_api.messages.OpenApiMessages_pb2 import (
     ProtoOAApplicationAuthReq,
     ProtoOARefreshTokenReq,
 )
-from ctrader_open_api.messages.OpenApiModelMessages_pb2 import ProtoOAExecutionType
 from twisted.internet import reactor
+
+from api import TradingTrackerApi
+from guard import RolloverGuard
+from symbols import SymbolCatalog
+from tracker import Tracker
 
 logging.basicConfig(
     stream=sys.stdout,
     level=os.environ.get("LOG_LEVEL", "INFO").upper(),
-    format="%(asctime)s %(levelname)s %(message)s",
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 log = logging.getLogger("ctrader-daemon")
 
@@ -93,6 +99,19 @@ class Daemon:
         self.client.setDisconnectedCallback(self.on_disconnected)
         self.client.setMessageReceivedCallback(self.on_message)
 
+        api = TradingTrackerApi(
+            require_env("TRADING_TRACKER_API_URL"),
+            require_env("TRADING_TRACKER_API_TOKEN"),
+        )
+        self.catalog = SymbolCatalog(self.client, self.account_id)
+        self.tracker = Tracker(api, self.catalog, float(os.environ.get("MAX_RISK_EURO", "500")))
+        self.guard = RolloverGuard(
+            self.client, api, self.account_id,
+            enabled=os.environ.get("GUARD_ENABLED", "false").lower() in ("1", "true", "yes"),
+            minutes_before=int(os.environ.get("GUARD_MINUTES_BEFORE", "5")),
+            minutes_after=int(os.environ.get("GUARD_MINUTES_AFTER", "10")),
+        )
+
     def run(self) -> None:
         self.client.startService()
         reactor.run()
@@ -121,7 +140,13 @@ class Daemon:
     def on_account_auth(self, message) -> None:
         if self.is_error(message, "authentification compte"):
             return
-        log.info("✓ Compte %s authentifié — en écoute des événements d'exécution", self.account_id)
+        log.info("✓ Compte %s authentifié — chargement du catalogue de symboles…", self.account_id)
+        d = self.catalog.load()
+        d.addCallbacks(self.on_ready, self.fail)
+
+    def on_ready(self, _=None) -> None:
+        log.info("✓ Démon prêt — tracker en écoute des événements d'exécution")
+        self.guard.start()
 
     def refresh_tokens(self) -> None:
         log.info("Access token expiré — rafraîchissement…")
@@ -147,16 +172,10 @@ class Daemon:
         if name == "ProtoHeartbeatEvent":
             log.debug("Heartbeat serveur")
         elif name == "ProtoOAExecutionEvent":
-            exec_type = ProtoOAExecutionType.Name(event.executionType)
-            details = []
-            if event.HasField("position"):
-                details.append(f"position #{event.position.positionId} {event.position.tradeData.symbolId}")
-            if event.HasField("deal"):
-                details.append(f"deal #{event.deal.dealId} volume {event.deal.volume}")
-            if event.HasField("order"):
-                details.append(f"ordre #{event.order.orderId}")
-            log.info("Événement d'exécution %s — %s", exec_type, ", ".join(details) or "(sans détail)")
-            log.debug("Détail complet :\n%s", event)
+            d = self.tracker.on_execution_event(event)
+            d.addErrback(lambda f: log.error("Erreur du tracker : %s", f.getTraceback()))
+        elif name == "ProtoOASpotEvent":
+            self.catalog.on_spot(event)
         elif name == "ProtoOAAccountsTokenInvalidatedEvent":
             log.warning("Token invalidé par le serveur — rafraîchissement")
             self.refresh_tokens()

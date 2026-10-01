@@ -1,6 +1,6 @@
 .PHONY: run serve snapshot help \
 	deploy prod-check prod-cache-clear prod-migrate prod-nginx-reload \
-	prod-ps prod-logs prod-shell prod-console prod-snapshot
+	prod-ps prod-logs prod-shell prod-console prod-snapshot prod-daemon-logs
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -30,11 +30,11 @@ PROD_DIR     ?= /root/workspace_dar/trading-tracker
 PROD_URL     ?= https://trading-tracker.freeddns.org
 PROD_COMPOSE  = docker compose -f compose.prod.yaml
 
-deploy: ## Déploiement complet en prod : reset sur origin/main, rebuild app, cache:clear, migrations, healthcheck
+deploy: ## Déploiement complet en prod : reset sur origin/main, rebuild app + démon, cache:clear, migrations, healthcheck
 	ssh $(PROD_SSH) 'set -e; cd $(PROD_DIR) \
 		&& git fetch origin main \
 		&& git reset --hard origin/main \
-		&& $(PROD_COMPOSE) up -d --build app \
+		&& $(PROD_COMPOSE) up -d --build app ctrader-daemon \
 		&& $(PROD_COMPOSE) exec -T app php bin/console cache:clear \
 		&& $(PROD_COMPOSE) exec -T app php bin/console doctrine:migrations:migrate -n'
 	@$(MAKE) --no-print-directory prod-check
@@ -61,6 +61,9 @@ prod-ps: ## État des conteneurs en prod
 
 prod-logs: ## Suit les logs du conteneur app en prod (100 dernières lignes)
 	ssh $(PROD_SSH) 'cd $(PROD_DIR) && $(PROD_COMPOSE) logs -f --tail=100 app'
+
+prod-daemon-logs: ## Suit les logs du démon cTrader en prod (100 dernières lignes)
+	ssh $(PROD_SSH) 'cd $(PROD_DIR) && $(PROD_COMPOSE) logs -f --tail=100 ctrader-daemon'
 
 prod-shell: ## Ouvre un shell dans le conteneur app en prod
 	ssh -t $(PROD_SSH) 'cd $(PROD_DIR) && $(PROD_COMPOSE) exec app sh'

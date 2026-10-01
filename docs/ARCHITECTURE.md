@@ -18,6 +18,7 @@
 | CSS framework | Bootstrap 5.3 + bootstrap-icons (CDN) |
 | Screenshot storage | Cloudflare R2 via Flysystem (`asyncaws` S3 adapter) |
 | Google login | Firebase Authentication (`src/Security/Firebase/`) |
+| Trade auto-tracking | `ctrader-daemon/` (Python, cTrader Open API) feeds `/api/trades` from the broker account; the `ctrader/` cBots are the local fallback |
 
 ## Request flow
 

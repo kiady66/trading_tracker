@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY daemon.py .
+COPY *.py .
 
 ENV CTRADER_TOKENS_FILE=/data/tokens.json \
     HEALTH_FILE=/tmp/ctrader-daemon-health

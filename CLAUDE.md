@@ -7,8 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Trading Tracker is a Symfony 7.4 LTS / PHP 8.5 web application for tracking and
 analyzing trades. PostgreSQL + Doctrine ORM (DBAL 4), Twig + Stimulus.js/Hotwired
 Turbo frontend (Asset Mapper, no build step), screenshots on Cloudflare R2,
-error monitoring via Sentry (prod only). Two cTrader cBots feed the API
-(see [ctrader/README.md](ctrader/README.md)).
+error monitoring via Sentry (prod only). The broker account feeds the API via
+the `ctrader-daemon/` container (cTrader Open API); the two cTrader cBots in
+`ctrader/` are the local fallback.
 
 **Production is live** at https://trading-tracker.freeddns.org (DigitalOcean droplet,
 Docker Compose). The old Mac mini deployment is obsolete.
@@ -22,7 +23,8 @@ Read these before diving into the code — they are written to orient an AI quic
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Stack, ER diagram of all entities, request flow, auth (form + Firebase), R2 screenshot pipeline, routes |
 | [docs/PRODUCTION.md](docs/PRODUCTION.md) | **Prod runbook**: infra diagram, deploy procedure (with the cache:clear trap), SSL/renewal, env vars, troubleshooting |
 | [docs/API.md](docs/API.md) | REST API reference (`/api/*`) |
-| [ctrader/README.md](ctrader/README.md) | The two cTrader cBots: auto-tracking of positions via the API, and the rollover stop-loss guard (17:00 New York) |
+| [ctrader-daemon/README.md](ctrader-daemon/README.md) | Python daemon (cTrader Open API): auto-tracking of positions via the API, and the rollover stop-loss guard (17:00 New York) |
+| [ctrader/README.md](ctrader/README.md) | The two cTrader cBots — local fallback of the daemon (cloud execution blocks HTTP) |
 | [docs/plans/](docs/plans/) | Historical/feature plans. `macmini-deployment.md`, `oracle-cloud-deployment.md`, `railway-deployment.md` are **obsolete** (superseded by the droplet); others describe shipped or planned features |
 
 ## Common Commands
@@ -56,7 +58,8 @@ composer install
 make deploy
 
 # Other prod targets: prod-check, prod-cache-clear, prod-migrate, prod-logs,
-# prod-ps, prod-shell, prod-console CMD="...", prod-nginx-reload, prod-snapshot
+# prod-ps, prod-shell, prod-console CMD="...", prod-nginx-reload, prod-snapshot,
+# prod-daemon-logs (démon cTrader)
 
 # Regenerate a daily news wrap in prod (normally done by a 23:59 cron on the
 # droplet — claude -p runs INSIDE the app container, see docs/PRODUCTION.md)

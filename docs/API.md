@@ -231,11 +231,14 @@ These fields in the response are calculated server-side and cannot be set direct
 
 ## Allowed assets
 
+Source of truth: `Trade::ALLOWED_ASSETS` (src/Entity/Trade.php).
+
 ```
 EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD, NZD/USD,
-EUR/GBP, EUR/JPY, GBP/JPY, GBP/CHF, NZD/JPY, AUD/GBP, AUD/NZD,
-AUD/CAD, NZD/CAD, AUD/CHF, AUD/JPY, GBP/CAD, GBP/AUD, CAD/CHF,
-CAD/JPY, CHF/JPY, BTC/USD, ETH/USD, XAU/USD, SP500
+EUR/GBP, EUR/JPY, EUR/CHF, EUR/NZD, GBP/JPY, GBP/CHF, NZD/JPY,
+AUD/GBP, AUD/NZD, AUD/CAD, NZD/CAD, AUD/CHF, AUD/JPY, GBP/CAD,
+GBP/AUD, GBP/NZD, CAD/CHF, CAD/JPY, CHF/JPY, BTC/USD, ETH/USD,
+XAU/USD, SP500, NAS100, USOIL
 ```
 
 ## Allowed order types

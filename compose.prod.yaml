@@ -23,6 +23,17 @@ services:
     depends_on:
       - app
 
+  # Démon cTrader Open API (tracker + rollover guard) — voir ctrader-daemon/README.md.
+  # Il appelle l'API via l'URL publique (comme les cBots) : nginx doit être up.
+  ctrader-daemon:
+    build: ctrader-daemon
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ctrader_tokens:/data
+    depends_on:
+      - nginx
+
   database:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -41,3 +52,4 @@ services:
 volumes:
   app_var:
   database_data:
+  ctrader_tokens:
