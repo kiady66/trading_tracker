@@ -51,7 +51,8 @@ Tests : `python3 -m unittest discover tests` (fonctions pures, sans SDK).
 ## Lancer en local
 
 ```bash
-python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt
+python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt \
+  && .venv/bin/pip install -U pyOpenSSL service_identity requests tzdata
 set -a && source ../.env && set +a   # les CTRADER_* sont dans le .env racine
 .venv/bin/python daemon.py
 ```

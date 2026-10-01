@@ -1,13 +1,10 @@
 # SDK officiel Spotware (Twisted + protobuf). Il pinne pyOpenSSL==24.1.0, trop
-# vieux pour cryptography récente : on force une version moderne juste après —
-# pip râle sur le pin mais l'API utilisée est compatible (vérifié).
+# vieux pour les cryptography récentes : installer ce fichier PUIS upgrader
+# (le résolveur pip refuse le conflit en une seule passe, l'API utilisée est
+# pourtant compatible — vérifié) :
+#   pip install -r requirements.txt && pip install -U pyOpenSSL service_identity requests tzdata
+# - service_identity : vérification TLS stricte du hostname par Twisted
+#   (sinon vérification « rudimentaire » — inacceptable pour une API de trading)
+# - requests : appels REST vers l'API Trading Tracker
+# - tzdata : fuseau America/New_York (absent des images slim)
 ctrader-open-api==0.9.2
-pyOpenSSL>=26
-# Vérification TLS stricte du hostname par Twisted (sinon simple warning et
-# vérification « rudimentaire » — inacceptable pour une API de trading).
-service_identity
-# Appels REST vers l'API Trading Tracker (exécutés dans le threadpool Twisted).
-requests
-# Fuseau America/New_York pour le rollover guard (les images slim n'embarquent
-# pas la base IANA système).
-tzdata

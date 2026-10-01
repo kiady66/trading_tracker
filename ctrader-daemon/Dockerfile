@@ -3,7 +3,9 @@ FROM python:3.13-slim
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Deux passes obligatoires : voir le commentaire de requirements.txt.
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir -U pyOpenSSL service_identity requests tzdata
 
 COPY *.py .
 
