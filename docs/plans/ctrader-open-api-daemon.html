@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan — Démon cTrader Open API</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --ink: #1e2430; --muted: #5b6472;
+    --accent: #0f6fde; --ok: #0a7d4f; --warn: #b3560b; --line: #e3e5e9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 2.5rem 1rem 5rem;
+  }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 1.9rem; margin: 0 0 .3rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; }
+  h2 {
+    font-size: 1.25rem; margin: 2.6rem 0 .8rem; padding-bottom: .35rem;
+    border-bottom: 2px solid var(--line);
+  }
+  h2 .num { color: var(--accent); margin-right: .4rem; }
+  h3 { font-size: 1.02rem; margin: 1.4rem 0 .4rem; }
+  p { margin: .5rem 0; }
+  code, pre {
+    font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: .86em;
+    background: #eef0f3; border-radius: 4px;
+  }
+  code { padding: .1em .35em; }
+  pre { padding: .8rem 1rem; overflow-x: auto; line-height: 1.5; }
+  table { border-collapse: collapse; width: 100%; margin: .8rem 0; font-size: .93rem; }
+  th, td { border: 1px solid var(--line); padding: .45rem .65rem; text-align: left; vertical-align: top; }
+  th { background: #eef0f3; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: 1rem 1.2rem; margin: 1rem 0;
+  }
+  .card.context { border-left: 4px solid var(--warn); }
+  .card.decision { border-left: 4px solid var(--accent); }
+  .card.done-criteria { border-left: 4px solid var(--ok); }
+  ul, ol { margin: .5rem 0; padding-left: 1.4rem; }
+  li { margin: .3rem 0; }
+  .phase {
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: 1rem 1.2rem; margin: 1rem 0;
+  }
+  .phase h3 { margin-top: 0; }
+  .phase .who { font-size: .8rem; font-weight: 600; letter-spacing: .03em;
+    text-transform: uppercase; border-radius: 99px; padding: .12rem .6rem; }
+  .who.user { background: #fdf0e3; color: var(--warn); }
+  .who.claude { background: #e7f0fd; color: var(--accent); }
+  .muted { color: var(--muted); }
+  .arch { font-size: .85rem; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Démon cTrader Open API</h1>
+  <p class="subtitle">Remplacer les deux cBots par un service serveur connecté à l'Open API de Spotware — tracking des trades et rollover guard en 24/7, sans cTrader Desktop ni exécution cloud. <span class="muted">Plan du 29/09/2026.</span></p>
+
+  <div class="card context">
+    <strong>Pourquoi ce chantier.</strong> L'exécution cloud gratuite de cTrader
+    <a href="https://help.ctrader.com/ctrader-algo/documentation/cbots/cloud-requirements/">bloque toutes les requêtes HTTP sortantes</a>
+    (seul un WebSocket vers le port 25345 est toléré) : les cBots y démarrent mais leurs appels vers
+    <code>/api/trades</code> sont avalés silencieusement. Constaté en prod le 29/09/2026 — aucun
+    <code>POST /api/trades</code> dans les logs nginx alors que le bot cloud loggait ses tentatives.
+    Les cBots restent fonctionnels en exécution <em>locale</em> (cTrader Desktop ouvert), qui sert de
+    solution de repli pendant toute la durée du chantier.
+  </div>
+
+  <h2><span class="num">1.</span> Architecture cible</h2>
+  <pre class="arch">
+┌─────────────────────┐   ProtoOAExecutionEvent    ┌──────────────────────── droplet ───┐
+│  Serveurs Spotware   │ ─────────(push)──────────▶ │  ctrader-daemon (nouveau conteneur) │
+│ live.ctraderapi.com  │ ◀──ProtoOAAmendPositionSLTP│      │ POST/PATCH /api/trades        │
+│   :5035 (TCP+SSL)    │       (rollover guard)     │      ▼ (token API existant)         │
+└─────────────────────┘                             │  nginx ──▶ app (Symfony)  ──▶ db    │
+                                                    └─────────────────────────────────────┘</pre>
+  <ul>
+    <li>Un seul service nouveau : <code>ctrader-daemon</code>, ajouté à <code>compose.prod.yaml</code>.</li>
+    <li>Il consomme la <strong>même API REST</strong> que les cBots (mêmes payloads, même token personnel) : <strong>aucun changement côté Symfony</strong>.</li>
+    <li>Connexion sortante droplet → Spotware : rien à ouvrir sur le firewall.</li>
+    <li>Les deux cBots actuels sont conservés dans <code>ctrader/</code> comme solution locale de secours.</li>
+  </ul>
+
+  <div class="card decision">
+    <strong>Décisions proposées</strong> (à valider avant la phase 1) :
+    <ul>
+      <li><strong>Langage : Python</strong> avec le SDK officiel Spotware <a href="https://github.com/spotware/OpenApiPy">OpenApiPy</a> (Twisted). Alternative : C# avec OpenAPI.Net pour rester proche du code des cBots — mais Python simplifie l'image Docker et le SDK est le mieux maintenu.</li>
+      <li><strong>Passer par l'API REST Symfony</strong> et non par un accès direct à la base : réutilise la validation, l'idempotence par <code>dealId</code> et la logique de calcul déjà testées.</li>
+      <li><strong>Un seul compte</strong> suivi (le compte live actuel) — pas de multi-comptes dans cette version.</li>
+    </ul>
+  </div>
+
+  <h2><span class="num">2.</span> Prérequis OAuth (manuel, une seule fois)</h2>
+  <ol>
+    <li>Créer un compte partenaire sur <a href="https://openapi.ctrader.com">openapi.ctrader.com</a> avec le cTrader ID.</li>
+    <li>Créer une application : nom, redirect URI (ex. <code>https://trading-tracker.freeddns.org/ctrader/oauth/callback</code> — une page statique suffit, on ne s'en sert qu'une fois pour récupérer le <code>code</code>).</li>
+    <li>Récupérer <code>client_id</code> et <code>client_secret</code>.</li>
+    <li>Dérouler le flow OAuth (scope <code>trading</code>) une fois dans le navigateur → <code>access_token</code> + <code>refresh_token</code>.</li>
+    <li>Récupérer le <code>ctidTraderAccountId</code> du compte live via <code>ProtoOAGetAccountListByAccessTokenReq</code>.</li>
+  </ol>
+  <p>Le tout atterrit dans le <code>.env</code> du droplet (jamais commité — repo public) :</p>
+  <pre>CTRADER_CLIENT_ID=
+CTRADER_CLIENT_SECRET=
+CTRADER_ACCESS_TOKEN=      # renouvelé ensuite automatiquement par le démon
+CTRADER_REFRESH_TOKEN=
+CTRADER_ACCOUNT_ID=        # ctidTraderAccountId
+TRACKER_API_TOKEN=         # token personnel existant (Mon profil → Token API cTrader)</pre>
+
+  <h2><span class="num">3.</span> Composant tracker <span class="muted">(remplace TradingTrackerBot)</span></h2>
+  <p><strong>Composant 100 % passif côté broker</strong> : il <em>écoute</em> les événements que
+  Spotware pousse (colonne de gauche = ce que le démon <em>reçoit</em> quand le trader agit) et
+  n'écrit que vers l'API REST de Trading Tracker. Il n'envoie jamais le moindre ordre au broker.</p>
+  <table>
+    <tr><th>Événement reçu (action du trader)</th><th>Réaction du démon (API Trading Tracker)</th><th>Équivalent cBot</th></tr>
+    <tr>
+      <td>Ouverture d'une position (<code>ProtoOAExecutionEvent</code>, fill d'ouverture)</td>
+      <td><code>POST /api/trades</code> (asset, orderType, entryDate, risque, RR initial, SL, entryPrice, targetPrice, volume, <code>ctraderPositionId</code>)</td>
+      <td><code>Positions.Opened</code></td>
+    </tr>
+    <tr>
+      <td>Déplacement du SL/TP par le trader</td>
+      <td><code>PATCH</code> — risque recalculé, SL ajouté à l'historique <code>stopLosses</code> (l'API déduplique)</td>
+      <td><code>Positions.Modified</code></td>
+    </tr>
+    <tr>
+      <td>Clôture par le trader ou par SL/TP (fill de clôture, partielle ou totale)</td>
+      <td><code>PATCH</code> avec <code>exit: {dealId, price, volume, date}</code> ; <code>closed: true</code> sur le dernier deal — idempotence par <code>dealId</code> conservée</td>
+      <td><code>Positions.Closed</code> + sync <code>History</code></td>
+    </tr>
+  </table>
+  <h3>Améliorations par rapport au cBot</h3>
+  <ul>
+    <li><strong>Logs exploitables</strong> : chaque appel REST loggé avec méthode, URL et code HTTP.</li>
+    <li><strong>Pas de rattrapage</strong> (choix assumé) : le démon est purement événementiel, comme le cBot — une position ouverte avant son démarrage ou un événement manqué pendant une coupure ne sont pas recréés automatiquement ; correction manuelle dans l'app si besoin.</li>
+  </ul>
+  <h3>Points techniques</h3>
+  <ul>
+    <li>Mapping <code>symbolId → nom</code> via <code>ProtoOASymbolsListReq</code> (cache en mémoire), puis même normalisation que le cBot (<code>EURUSD → EUR/USD</code>, suffixes broker retirés) contre la liste des paires supportées — <strong>à resynchroniser avec <code>Trade::ALLOWED_ASSETS</code></strong>. Cas particuliers confirmés : <code>GBPNZD → GBP/NZD</code> (comme les autres paires), <code>NAS100</code> tel quel, et le symbole broker <code>USWTI</code> correspond à <code>USOIL</code> dans l'app.</li>
+    <li>Calcul du risque : distance SL en pips via <code>pipPosition</code>/<code>lotSize</code> de <code>ProtoOASymbol</code> (l'équivalent de <code>Symbol.PipSize</code>/<code>PipValue</code> du cBot — à valider en phase 2 sur des cas réels).</li>
+  </ul>
+
+  <h2><span class="num">4.</span> Composant rollover guard <span class="muted">(remplace RolloverStopLossGuard)</span></h2>
+  <ul>
+    <li>Planificateur interne calé sur <code>America/New_York</code> (comme le cBot — l'heure de Paris reste juste toute l'année).</li>
+    <li><strong>17h00 NY − 5 min</strong> : pour chaque position avec SL — pousser le niveau dans <code>stopLosses</code> via l'API REST, <em>puis</em> retirer le SL via <code>ProtoOAAmendPositionSLTPReq</code>. API injoignable → SL laissé en place (le niveau ne doit jamais être perdu).</li>
+    <li><strong>17h00 NY + 10 min</strong> : remettre sur chaque position sans SL le dernier élément de <code>stopLosses</code>. Refus broker (prix a traversé le niveau) → warning loggé, pas de fermeture automatique.</li>
+    <li>Positions non trackées : intouchées, comme aujourd'hui.</li>
+    <li>Avantage sur le cBot : tracker et guard partagent le même processus — plus de risque de double instance ou d'instance oubliée.</li>
+  </ul>
+
+  <h2><span class="num">5.</span> Garde-fous financiers</h2>
+  <div class="card done-criteria">
+    <strong>Principe : le démon ne peut pas faire perdre d'argent par lui-même.</strong>
+    <ul>
+      <li><strong>Aucun passage d'ordre, par construction</strong> : le code ne contient aucun appel
+        d'ouverture, de clôture ou de changement de volume (<code>ProtoOANewOrderReq</code>,
+        close, etc. ne sont jamais implémentés). La seule écriture broker est
+        <code>ProtoOAAmendPositionSLTPReq</code> (SL du rollover guard) — comme le cBot actuel.</li>
+      <li><strong>Le niveau de SL n'est jamais perdu</strong> : sauvegardé en base <em>avant</em> tout
+        retrait ; échec de sauvegarde → SL laissé en place. Au (re)démarrage hors fenêtre,
+        restauration des SL manquants — <strong>uniquement sur les positions liées à un trade
+        tracké en base</strong> (dernier niveau de <code>stopLosses</code>) ; toute autre position
+        reste intouchée.</li>
+      <li><strong>Le guard n'agit que dans sa fenêtre</strong> (17h00 NY ±) : hors fenêtre, le démon
+        ne touche à rien côté broker (hors restauration de SL manquants ci-dessus).</li>
+      <li><strong>Validation intégrale sur compte démo</strong> (phases 1–3) avant tout contact avec
+        le compte live, avec comparaison de parité face au cBot local.</li>
+      <li><strong>Mise en live progressive</strong> : la phase 4 démarre avec le guard
+        <em>désactivé</em> (flag <code>GUARD_ENABLED=false</code>) — tracker seul, donc zéro écriture
+        broker — puis activation du guard après quelques jours et un cycle de rollover validé en démo.</li>
+      <li><strong>Coupe-circuit trivial</strong> : <code>docker compose stop ctrader-daemon</code>
+        arrête tout ; les positions gardent leur SL (le retrait n'a lieu que dans la fenêtre, et un
+        démon arrêté ne retire rien).</li>
+      <li><strong>Risque résiduel inchangé</strong> : la fenêtre de rollover sans filet (~15 min),
+        compromis déjà assumé avec le cBot actuel — le démon ne l'élargit pas.</li>
+    </ul>
+  </div>
+
+  <h2><span class="num">6.</span> Connexion, tokens, résilience</h2>
+  <ul>
+    <li><strong>Keepalive</strong> : <code>ProtoHeartbeatEvent</code> toutes les ~10 s (la connexion est coupée après ~30 s de silence).</li>
+    <li><strong>Refresh token</strong> : l'access token expire (~30 jours) → <code>ProtoOARefreshTokenReq</code> automatique ; tokens persistés dans un petit volume (<code>ctrader_tokens</code>) pour survivre aux redémarrages. Échec de refresh = seule vraie panne « silencieuse » possible → erreur remontée à Sentry.</li>
+    <li><strong>Reconnexion</strong> : backoff exponentiel + re-authentification + re-souscription aux événements. Pas de rattrapage des événements manqués pendant la coupure (voir section 3).</li>
+    <li><strong>Rate limits</strong> Spotware (~50 msg/s) : très loin de notre volume, aucun throttling à prévoir.</li>
+  </ul>
+
+  <h2><span class="num">7.</span> Déploiement</h2>
+  <ul>
+    <li>Nouveau dossier <code>ctrader-daemon/</code> : <code>Dockerfile</code> (python:3.13-slim), code, <code>README.md</code> dédié (conforme à la règle « README par répertoire autonome »).</li>
+    <li>Service dans <code>compose.prod.yaml</code> : <code>restart: unless-stopped</code>, env depuis le <code>.env</code> du droplet, volume tokens, healthcheck simple (fichier heartbeat touché à chaque événement/keepalive).</li>
+    <li>Logs via <code>docker compose logs ctrader-daemon</code> ; cible Makefile <code>prod-daemon-logs</code>.</li>
+    <li>Dev : testable en local contre un <strong>compte démo</strong> (<code>demo.ctraderapi.com:5035</code>) et l'app sur <code>localhost:8001</code>.</li>
+  </ul>
+
+  <h2><span class="num">8.</span> Phases</h2>
+
+  <div class="phase">
+    <h3>Phase 0 — Enregistrement OAuth <span class="who user">toi</span></h3>
+    <p>Créer l'app sur openapi.ctrader.com, dérouler le flow une fois (guidé pas à pas), remplir le <code>.env</code> du droplet. <span class="muted">~30 min, bloquant pour la suite.</span></p>
+  </div>
+  <div class="phase">
+    <h3>Phase 1 — Squelette de connexion <span class="who claude">Claude</span></h3>
+    <p>Démon qui se connecte, s'authentifie (app + compte), maintient le heartbeat, souscrit aux événements du compte et logge tout. Critère : les événements d'un trade démo apparaissent dans les logs.</p>
+  </div>
+  <div class="phase">
+    <h3>Phase 2 — Portage du tracker <span class="who claude">Claude</span></h3>
+    <p>Mapping symboles, calcul du risque, POST/PATCH/exits. Critère : parité avec <code>TradingTrackerBot</code> sur un compte démo (ouverture, déplacement de SL, clôture partielle, clôture totale).</p>
+  </div>
+  <div class="phase">
+    <h3>Phase 3 — Portage du rollover guard <span class="who claude">Claude</span></h3>
+    <p>Fenêtre 17h00 NY, retrait/restauration des SL, mêmes règles d'échec que le cBot. Critère : un cycle complet observé sur compte démo.</p>
+  </div>
+  <div class="phase">
+    <h3>Phase 4 — Prod en double marche <span class="who claude">Claude</span> <span class="who user">toi</span></h3>
+    <p>Déploiement sur le droplet branché sur le compte live, <strong>cBots locaux éteints</strong> (pas de doublons : l'idempotence par <code>dealId</code> protège, mais autant éviter). Observation sur quelques jours de trading réels, dont un passage de rollover.</p>
+  </div>
+  <div class="phase">
+    <h3>Phase 5 — Bascule définitive <span class="who claude">Claude</span></h3>
+    <p>Mise à jour de la doc : <code>ctrader/README.md</code> (corriger la fausse promesse d'exécution cloud, marquer les cBots comme solution locale de secours), <code>docs/ARCHITECTURE.md</code> et <code>docs/PRODUCTION.md</code> (nouveau conteneur, runbook).</p>
+  </div>
+
+  <div class="card done-criteria">
+    <strong>Terminé quand :</strong> un trade ouvert depuis n'importe quel appareil (mobile inclus, Mac éteint)
+    apparaît dans Trading Tracker en quelques secondes ; les SL survivent au rollover ; le démon
+    survit à un redémarrage du droplet et à une coupure réseau (reconnexion automatique) ;
+    plus aucun cBot nécessaire.
+  </div>
+
+  <h2><span class="num">9.</span> Risques et points ouverts</h2>
+  <table>
+    <tr><th>Risque</th><th>Mitigation</th></tr>
+    <tr><td>Calcul du risque en € divergent du cBot (pip value via Open API)</td><td>Comparaison côte à côte cBot local vs démon sur compte démo en phase 2</td></tr>
+    <tr><td>Refresh token expiré/révoqué → démon muet</td><td>Sentry + healthcheck Docker ; procédure de ré-auth documentée dans le README du démon</td></tr>
+    <tr><td>Événements manqués pendant une coupure</td><td>Non rattrapés (choix assumé, identique au cBot) : correction manuelle dans l'app si besoin ; reconnexion rapide pour minimiser la fenêtre</td></tr>
+    <tr><td>Suffixes symboles broker différents via Open API</td><td>Vérifier sur le compte réel en phase 2 (la normalisation actuelle gère déjà les suffixes <code>.i/.s/.p</code>)</td></tr>
+    <tr><td>Petit droplet : un conteneur de plus</td><td>Empreinte minime (démon idle la plupart du temps) ; à surveiller en phase 4</td></tr>
+  </table>
+
+  <h2><span class="num">10.</span> Références</h2>
+  <ul>
+    <li><a href="https://help.ctrader.com/open-api/">cTrader Open API — Getting started</a></li>
+    <li><a href="https://help.ctrader.com/open-api/messages/">Messages Open API</a> (ProtoOAExecutionEvent, ProtoOAAmendPositionSLTPReq…)</li>
+    <li><a href="https://github.com/spotware/OpenApiPy">SDK officiel Python — OpenApiPy</a></li>
+    <li><a href="https://help.ctrader.com/ctrader-algo/documentation/cbots/cloud-requirements/">Restrictions de l'exécution cloud des cBots</a> (origine du chantier)</li>
+  </ul>
+</main>
+</body>
+</html>
