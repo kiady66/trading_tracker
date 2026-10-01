@@ -13,12 +13,15 @@ const ZONES = [
 const norm = (a) => ((a % 360) + 360) % 360
 
 export default class extends Controller {
-    static targets = ["dial", "ledger", "status", "saveButton"]
-    static values = { banks: Array, saveUrl: String, csrf: String }
+    static targets = ["dial", "ledger", "status", "saveButton", "refreshButton", "refreshInfo"]
+    static values = { banks: Array, saveUrl: String, refreshUrl: String, refreshStatusUrl: String, refreshRunning: Boolean, csrf: String }
 
     connect() {
         // Base vide : la page affiche un message à la place du cadran
         if (!this.hasDialTarget) return
+
+        // Un rafraîchissement lancé avant l'arrivée sur la page : on reprend le sondage
+        if (this.refreshRunningValue) this.pollRefresh()
 
         this.banks = structuredClone(this.banksValue)
         this.drag = null
@@ -41,6 +44,7 @@ export default class extends Controller {
     }
 
     disconnect() {
+        clearTimeout(this.pollTimer)
         if (!this.hasDialTarget) return
 
         const svg = this.dialTarget
@@ -228,5 +232,91 @@ export default class extends Controller {
     setStatus(message, kind) {
         this.statusTarget.textContent = message
         this.statusTarget.className = "cycles-status " + kind
+    }
+
+    // ── Actualisation des taux par l'IA (commande en arrière-plan + sondage) ──
+
+    async refresh() {
+        this.setRefreshLoading(true)
+        this.setRefreshInfo("Lancement…")
+
+        try {
+            const response = await fetch(this.refreshUrlValue, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                body: JSON.stringify({ _token: this.csrfValue }),
+            })
+            // 409 : déjà en cours (autre onglet) → on se contente de suivre l'exécution
+            if (!response.ok && response.status !== 409) {
+                throw new Error((await response.json()).error || "Erreur au lancement")
+            }
+            this.pollRefresh()
+        } catch (error) {
+            this.setRefreshLoading(false)
+            this.setRefreshInfo(error.message || "Impossible de lancer l'actualisation.", true)
+        }
+    }
+
+    // Sonde l'état en base toutes les minutes (une exécution dure ~3 min)
+    pollRefresh() {
+        this.setRefreshLoading(true)
+        this.setRefreshInfo("Actualisation en cours… (environ 3 minutes)")
+
+        const tick = async () => {
+            try {
+                const status = await (await fetch(this.refreshStatusUrlValue, { headers: { Accept: "application/json" } })).json()
+                if (status.status === "running") {
+                    this.pollTimer = setTimeout(tick, 60000)
+                    return
+                }
+                this.refreshFinished(status)
+            } catch {
+                this.pollTimer = setTimeout(tick, 60000)
+            }
+        }
+        this.pollTimer = setTimeout(tick, 60000)
+    }
+
+    refreshFinished(status) {
+        this.setRefreshLoading(false)
+
+        if (status.status === "error") {
+            this.setRefreshInfo(`Échec : ${status.message || "erreur inconnue"}`, true)
+            return
+        }
+
+        // Nouvelles valeurs (taux, biais) sans recharger la page ; les angles
+        // n'ont pas bougé côté serveur mais on repart de l'état en base
+        if (Array.isArray(status.banks)) {
+            this.banks = structuredClone(status.banks)
+            this.render()
+        }
+
+        const when = status.finishedAt ? new Date(status.finishedAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : ""
+        const info = this.refreshInfoTarget
+        info.classList.remove("error")
+        info.textContent = `Dernière actualisation le ${when}${status.changes?.length ? " :" : " — aucun changement."}`
+        if (status.changes?.length) {
+            const list = document.createElement("ul")
+            for (const change of status.changes) {
+                const li = document.createElement("li")
+                li.textContent = change
+                list.append(li)
+            }
+            info.append(list)
+        }
+    }
+
+    setRefreshLoading(loading) {
+        const button = this.refreshButtonTarget
+        button.disabled = loading
+        button.setAttribute("aria-busy", loading ? "true" : "false")
+        button.querySelector("i")?.classList.toggle("spin", loading)
+        button.querySelector("span").textContent = loading ? "Actualisation en cours…" : "Actualiser les taux par l'IA"
+    }
+
+    setRefreshInfo(message, isError = false) {
+        this.refreshInfoTarget.textContent = message
+        this.refreshInfoTarget.classList.toggle("error", isError)
     }
 }

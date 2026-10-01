@@ -61,6 +61,10 @@ make deploy
 # Regenerate a daily news wrap in prod (normally done by a 23:59 cron on the
 # droplet — claude -p runs INSIDE the app container, see docs/PRODUCTION.md)
 make prod-console CMD="app:news:generate --date=2026-09-14"
+
+# Refresh central-bank rates on /cycles via claude -p (also triggered by the
+# page's "Actualiser les taux par l'IA" button, which runs it in the background)
+make prod-console CMD="app:cycles:refresh --dry-run"
 ```
 
 Production procedure details (and the cache:clear trap): see

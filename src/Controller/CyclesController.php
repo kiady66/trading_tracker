@@ -4,6 +4,8 @@ namespace App\Controller;
 
 use App\Entity\CentralBank;
 use App\Repository\CentralBankRepository;
+use App\Service\BackgroundConsoleLauncher;
+use App\Service\CentralBankRefreshStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,12 +23,62 @@ class CyclesController extends AbstractController
     public function index(
         CentralBankRepository $centralBankRepository,
         CsrfTokenManagerInterface $csrfTokenManager,
+        CentralBankRefreshStatus $refreshStatus,
     ): Response {
         $banks = array_map(self::serialize(...), $centralBankRepository->findAllOrdered());
 
         return $this->render('cycles/index.html.twig', [
             'banks' => $banks,
             'csrf_token' => $csrfTokenManager->getToken('cycles')->getValue(),
+            'refresh_status' => $refreshStatus->read(),
+        ]);
+    }
+
+    /**
+     * Lance app:cycles:refresh en arrière-plan (claude -p dure plusieurs
+     * minutes) ; la page sonde ensuite /cycles/refresh/status.
+     */
+    #[Route('/refresh', name: 'refresh', methods: ['POST'])]
+    public function refresh(
+        Request $request,
+        CentralBankRefreshStatus $refreshStatus,
+        BackgroundConsoleLauncher $launcher,
+    ): JsonResponse {
+        $payload = $request->toArray();
+
+        if (!$this->isCsrfTokenValid('cycles', $payload['_token'] ?? '')) {
+            return $this->json(['error' => 'Jeton CSRF invalide.'], 419);
+        }
+
+        if ($refreshStatus->isRunning()) {
+            return $this->json(['error' => 'Un rafraîchissement est déjà en cours.'], 409);
+        }
+
+        // Écrit "running" avant le lancement pour que le premier sondage ne
+        // voie pas l'ancien statut "done" et ne recharge pas la page trop tôt.
+        $refreshStatus->markRunning();
+        try {
+            $launcher->launch('app:cycles:refresh');
+        } catch (\Throwable $e) {
+            $refreshStatus->markError($e->getMessage());
+
+            return $this->json(['error' => 'Impossible de lancer le rafraîchissement.'], 500);
+        }
+
+        return $this->json(['started' => true], 202);
+    }
+
+    /**
+     * Sondé par la page pendant un rafraîchissement ; renvoie aussi les banques
+     * pour que le cadran et le tableau se mettent à jour sans rechargement.
+     */
+    #[Route('/refresh/status', name: 'refresh_status', methods: ['GET'])]
+    public function refreshStatus(
+        CentralBankRefreshStatus $refreshStatus,
+        CentralBankRepository $centralBankRepository,
+    ): JsonResponse {
+        return $this->json($refreshStatus->read() + [
+            'banks' => array_map(self::serialize(...), $centralBankRepository->findAllOrdered()),
         ]);
     }
 

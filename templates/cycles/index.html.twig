@@ -146,6 +146,24 @@
         .cycles-status.success { color: #16a34a; }
         .cycles-status.error   { color: #dc2626; }
 
+        .cycles-refresh {
+            margin-top: 1.25rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .cycles-refresh .btn { display: inline-flex; align-items: center; gap: 0.35rem; }
+        .cycles-refresh .spin { animation: cycles-spin 1s linear infinite; }
+        @keyframes cycles-spin { to { transform: rotate(360deg); } }
+
+        .cycles-refresh-info { font-size: 0.85rem; color: var(--text-muted); }
+        .cycles-refresh-info.error { color: #dc2626; }
+        .cycles-refresh-info ul { margin: 0.35rem 0 0; padding-left: 1.1rem; }
+
         .cycles-empty {
             margin: 3rem auto;
             text-align: center;
@@ -159,6 +177,9 @@
          data-controller="cycles-clock"
          data-cycles-clock-banks-value="{{ banks|json_encode|e('html_attr') }}"
          data-cycles-clock-save-url-value="{{ path('app_cycles_save') }}"
+         data-cycles-clock-refresh-url-value="{{ path('app_cycles_refresh') }}"
+         data-cycles-clock-refresh-status-url-value="{{ path('app_cycles_refresh_status') }}"
+         data-cycles-clock-refresh-running-value="{{ refresh_status.status|default('') == 'running' ? 'true' : 'false' }}"
          data-cycles-clock-csrf-value="{{ csrf_token }}">
 
         <div class="cycles-header">
@@ -196,6 +217,33 @@
                             <i class="bi bi-save me-1"></i> Enregistrer
                         </button>
                         <span class="cycles-status muted" data-cycles-clock-target="status" role="status"></span>
+                    </div>
+
+                    <div class="cycles-refresh">
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-cycles-clock-target="refreshButton"
+                                data-action="cycles-clock#refresh"
+                                title="Claude cherche les taux directeurs sur le web et met à jour le taux et le biais de chaque banque (la position sur le cadran n'est pas modifiée)">
+                            <i class="bi bi-stars"></i> <span>Actualiser les taux par l'IA</span>
+                        </button>
+                        <div class="cycles-refresh-info {{ refresh_status.status|default('') == 'error' ? 'error' }}"
+                             data-cycles-clock-target="refreshInfo" role="status">
+                            {% if refresh_status.status|default('') == 'running' %}
+                                Actualisation en cours… (environ 3 minutes)
+                            {% elseif refresh_status.status|default('') == 'done' %}
+                                Dernière actualisation le {{ refresh_status.finishedAt|date('d/m/Y à H:i') }}
+                                {% if refresh_status.changes is empty %}
+                                    — aucun changement.
+                                {% else %}
+                                    :
+                                    <ul>{% for change in refresh_status.changes %}<li>{{ change }}</li>{% endfor %}</ul>
+                                {% endif %}
+                            {% elseif refresh_status.status|default('') == 'error' %}
+                                Échec le {{ refresh_status.finishedAt|default('now')|date('d/m/Y à H:i') }} : {{ refresh_status.message|default('erreur inconnue') }}
+                            {% else %}
+                                Jamais actualisé automatiquement.
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>

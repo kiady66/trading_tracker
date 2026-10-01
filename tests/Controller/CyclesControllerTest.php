@@ -5,6 +5,8 @@ namespace App\Tests\Controller;
 use App\Entity\CentralBank;
 use App\Entity\User;
 use App\Repository\CentralBankRepository;
+use App\Service\BackgroundConsoleLauncher;
+use App\Service\CentralBankRefreshStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -20,6 +22,7 @@ class CyclesControllerTest extends WebTestCase
         $this->em = static::getContainer()->get(EntityManagerInterface::class);
         $this->em->getConnection()->executeStatement('TRUNCATE "user" RESTART IDENTITY CASCADE');
         $this->em->getConnection()->executeStatement('TRUNCATE central_bank RESTART IDENTITY CASCADE');
+        $this->em->getConnection()->executeStatement('TRUNCATE central_bank_refresh RESTART IDENTITY CASCADE');
     }
 
     private function createUser(string $email): User
@@ -136,5 +139,62 @@ class CyclesControllerTest extends WebTestCase
         $bank = static::getContainer()->get(CentralBankRepository::class)->findOneBy(['code' => 'Fed']);
         $this->assertSame(199.0, $bank->getAngle());
         $this->assertSame('neutre', $bank->getBias());
+    }
+
+    public function testRefreshLaunchesTheCommandInBackgroundOnce(): void
+    {
+        $this->createBank('Fed', 199.0);
+        $this->client->loginUser($this->createUser('bob@test.com'), 'main');
+        $token = $this->fetchCsrfToken();
+
+        // Sans cela le kernel est rebooté à chaque requête et le mock est perdu
+        $this->client->disableReboot();
+        $launcher = $this->createMock(BackgroundConsoleLauncher::class);
+        $launcher->expects($this->once())->method('launch')->with('app:cycles:refresh');
+        static::getContainer()->set(BackgroundConsoleLauncher::class, $launcher);
+
+        $this->client->jsonRequest('POST', '/cycles/refresh', ['_token' => 'forged']);
+        $this->assertResponseStatusCodeSame(419);
+
+        $this->client->jsonRequest('POST', '/cycles/refresh', ['_token' => $token]);
+        $this->assertResponseStatusCodeSame(202);
+
+        $this->client->request('GET', '/cycles/refresh/status');
+        $this->assertResponseIsSuccessful();
+        $status = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertSame('running', $status['status']);
+        $this->assertSame(['Fed'], array_column($status['banks'], 'code'));
+
+        // Déjà en cours : pas de second lancement
+        $this->client->jsonRequest('POST', '/cycles/refresh', ['_token' => $token]);
+        $this->assertResponseStatusCodeSame(409);
+
+        $crawler = $this->client->request('GET', '/cycles');
+        $this->assertSame('true', $crawler->filter('[data-cycles-clock-refresh-running-value]')->attr('data-cycles-clock-refresh-running-value'));
+        $this->assertSelectorTextContains('.cycles-refresh-info', 'Actualisation en cours');
+    }
+
+    public function testPageShowsTheLastRefreshReport(): void
+    {
+        $this->createBank('Fed', 199.0);
+        $this->client->loginUser($this->createUser('bob@test.com'), 'main');
+
+        $status = static::getContainer()->get(CentralBankRefreshStatus::class);
+        $status->markRunning();
+        $status->markDone(['Fed : taux 3,50-3,75 % → 4,00-4,25 %']);
+
+        $this->client->request('GET', '/cycles');
+        $this->assertResponseIsSuccessful();
+        $this->assertSelectorTextContains('.cycles-refresh-info', 'Dernière actualisation le');
+        $this->assertSelectorTextContains('.cycles-refresh-info li', 'Fed : taux 3,50-3,75 % → 4,00-4,25 %');
+
+        // Le sondage renvoie le même compte rendu, avec les banques pour rafraîchir le cadran
+        $this->client->request('GET', '/cycles/refresh/status');
+        $status = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertSame('done', $status['status']);
+        $this->assertSame(['Fed : taux 3,50-3,75 % → 4,00-4,25 %'], $status['changes']);
+        $this->assertSame('Fed', $status['banks'][0]['code']);
+        // Une seule ligne : markDone a repris la ligne "running" au lieu d'en créer une
+        $this->assertSame(1, (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM central_bank_refresh'));
     }
 }

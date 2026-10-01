@@ -274,6 +274,37 @@ Opérations courantes :
 La génération prend plusieurs minutes par jour (recherche web + rédaction,
 timeout 15 min dans la commande) — normal, ne pas s'inquiéter du délai.
 
+## Taux directeurs de l'horloge des cycles (bouton IA)
+
+Même mécanique que les news, mais déclenchée à la demande : le bouton
+« Actualiser les taux par l'IA » de `/cycles` appelle `POST /cycles/refresh`,
+qui insère une ligne `running` dans `central_bank_refresh` puis lance
+`app:cycles:refresh` **détachée de la requête** (`nohup … &` via
+[BackgroundConsoleLauncher](../src/Service/BackgroundConsoleLauncher.php), il
+n'y a pas de worker Messenger). La commande demande à `claude -p` un JSON strict
+(taux et biais par banque), le valide
+([CentralBankRateRefresher](../src/Service/CentralBankRateRefresher.php)) et
+met à jour `CentralBank.rate` / `bias` — **jamais la position sur le cadran**.
+Pendant ce temps le bouton est en chargement ; le JS sonde
+`GET /cycles/refresh/status` **toutes les minutes** (une exécution dure ~3 min),
+puis réactive le bouton et redessine cadran et tableau sans recharger la page.
+Les valeurs hors vocabulaire renvoyées par l'IA sont ignorées (jamais écrites).
+
+| Où | Rôle |
+|---|---|
+| table `central_bank_refresh` | une ligne par exécution : `status` (`running`/`done`/`error`), dates, `changes` (JSON, affiché sur la page), `message` d'erreur. Un `running` de plus de 20 min est traité comme mort |
+| `var/log/app-cycles-refresh.log` (volume `app_var`) | sortie de la commande lancée depuis le bouton |
+
+Le processus tourne sous `www-data` (PHP-FPM) : il a besoin de `claude`,
+`nohup`, d'un `HOME` inscriptible (`/home/www-data`, présent dans l'image) et
+de `CLAUDE_CODE_OAUTH_TOKEN` — vérifiés le 30/09/2026.
+
+| Besoin | Commande |
+|---|---|
+| Voir ce que l'IA changerait, sans écrire | `make prod-console CMD="app:cycles:refresh --dry-run"` |
+| Rejouer une réponse JSON sauvegardée | `app:cycles:refresh --from-file=reponse.json` |
+| Débloquer un bouton grisé (`running` fantôme) | attendre 20 min, ou `UPDATE central_bank_refresh SET status='error' WHERE status='running'` |
+
 ## Données
 
 - Données réelles migrées depuis la base locale le 15/09/2026 (267 trades,
