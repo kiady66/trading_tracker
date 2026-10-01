@@ -32,6 +32,7 @@ class Trade
         'AUD/NZD',
         'AUD/CAD',
         'NZD/CAD',
+        'NZD/CHF',
         'AUD/CHF',
         'AUD/JPY',
         'GBP/CAD',
