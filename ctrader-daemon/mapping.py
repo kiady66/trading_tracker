@@ -6,9 +6,10 @@ Sans dépendance au SDK pour rester testables avec un simple `python -m unittest
 # Doit rester synchronisé avec Trade::ALLOWED_ASSETS (src/Entity/Trade.php).
 SUPPORTED_ASSETS = {
     "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "AUD/USD", "USD/CAD", "NZD/USD",
-    "EUR/GBP", "EUR/JPY", "EUR/CHF", "EUR/NZD", "GBP/JPY", "GBP/CHF", "NZD/JPY",
-    "AUD/GBP", "AUD/NZD", "AUD/CAD", "NZD/CAD", "AUD/CHF", "AUD/JPY", "GBP/CAD",
-    "GBP/AUD", "GBP/NZD", "CAD/CHF", "CAD/JPY", "CHF/JPY",
+    "EUR/GBP", "EUR/JPY", "EUR/CHF", "EUR/AUD", "EUR/CAD", "EUR/NZD", "GBP/JPY",
+    "GBP/CHF", "NZD/JPY", "AUD/GBP", "AUD/NZD", "AUD/CAD", "NZD/CAD", "NZD/CHF",
+    "AUD/CHF", "AUD/JPY", "GBP/CAD", "GBP/AUD", "GBP/NZD", "CAD/CHF", "CAD/JPY",
+    "CHF/JPY",
     "BTC/USD", "ETH/USD", "XAU/USD", "SP500", "NAS100", "USOIL",
 }
 

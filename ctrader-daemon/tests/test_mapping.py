@@ -13,6 +13,9 @@ class NormalizeSymbolTest(unittest.TestCase):
     def test_forex_pair(self):
         self.assertEqual(normalize_symbol("EURUSD"), "EUR/USD")
         self.assertEqual(normalize_symbol("GBPNZD"), "GBP/NZD")
+        self.assertEqual(normalize_symbol("NZDCHF"), "NZD/CHF")
+        self.assertEqual(normalize_symbol("EURAUD"), "EUR/AUD")
+        self.assertEqual(normalize_symbol("EURCAD"), "EUR/CAD")
 
     def test_broker_suffix_stripped(self):
         self.assertEqual(normalize_symbol("EURUSD.i"), "EUR/USD")
