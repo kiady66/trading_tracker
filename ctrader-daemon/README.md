@@ -20,7 +20,7 @@ rollover guard (`ProtoOAAmendPositionSLTPReq`).
 | Fichier | Rôle |
 |---|---|
 | `daemon.py` | Connexion, auth app + compte, keepalive (SDK), refresh des tokens, dispatch des événements |
-| `tracker.py` | Réplique les trades : POST à l'ouverture, PATCH aux changements de SL/TP et aux clôtures (partielles/totales). Purement événementiel — **pas de rattrapage** (choix assumé) |
+| `tracker.py` | Réplique les trades : POST à l'ouverture, PATCH aux changements de SL/TP et aux clôtures (partielles/totales). Événements traités **en série** (un ordre limite produit un fill puis l'événement qui attache son SL — le second attend le POST du premier). Purement événementiel — **pas de rattrapage** (choix assumé) |
 | `guard.py` | Rollover guard : SL sauvé en base **avant** retrait, restauré en fin de fenêtre — uniquement sur les positions trackées. `ProtoOAReconcileReq` sert en lecture seule à lister les positions |
 | `rollover.py` | Fenêtres du guard (fonction pure, heure de New York) : lun–jeu retrait **16h55** → remise **18h15** (le temps que le spread se calme) ; **vendredi 16h45 → dimanche 18h15** en une seule fenêtre de week-end (marché fermé entre les deux, remise après le spread d'ouverture du dimanche) |
 | `symbols.py` | Catalogue symbolId → asset ; taux de conversion devise de cotation → devise du compte (spot éphémère, cache 30 min) pour le calcul du risque |

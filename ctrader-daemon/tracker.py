@@ -6,6 +6,11 @@ Purement événementiel (pas de rattrapage, choix assumé) :
 - SL/TP modifié           → PATCH {riskPercentage, stopLoss, initialRR}
 - fill de clôture (reçu)  → PATCH {exit: {...}} (+ closed sur la clôture totale)
 
+Les événements sont traités EN SÉRIE (file FIFO) : un ordre limite avec SL/TP
+pré-programmés produit deux événements quasi simultanés (le fill, puis l'ordre
+STOP_LOSS_TAKE_PROFIT qui attache le SL) — le second doit attendre que le POST
+du premier soit en base, sinon le SL est perdu (« trade non trouvé »).
+
 Aucune écriture broker ici : ce module ne fait que réagir à ce que le trader
 a déjà exécuté lui-même.
 """
@@ -38,9 +43,16 @@ class Tracker:
         self.catalog = catalog
         self.max_risk = max_risk
         self._sent_deal_ids = set()  # l'API dédoublonne par dealId de toute façon
+        self._queue = defer.succeed(None)  # sérialise le traitement des événements
+
+    def on_execution_event(self, event):
+        """Chaîne l'événement derrière ceux déjà en cours (FIFO). addBoth : un
+        échec loggé par l'appelant ne bloque jamais les événements suivants."""
+        self._queue = self._queue.addBoth(lambda _: self._process_event(event))
+        return self._queue
 
     @defer.inlineCallbacks
-    def on_execution_event(self, event):
+    def _process_event(self, event):
         if not self.catalog.loaded or not event.HasField("position"):
             return
         position = event.position
@@ -168,7 +180,10 @@ class Tracker:
                 "date": iso_from_ms(deal.executionTimestamp),
             },
         }
-        fully_closed = position.positionStatus == ProtoOAPositionStatus.POSITION_STATUS_CLOSED
+        # Un fill de clôture totale peut arriver sans statut CLOSED (vu en prod
+        # le 02/10/2026, trade #319) — le volume restant à 0 est l'autre signal.
+        fully_closed = position.positionStatus == ProtoOAPositionStatus.POSITION_STATUS_CLOSED \
+            or position.tradeData.volume == 0
         if fully_closed:
             payload["closed"] = True
 
