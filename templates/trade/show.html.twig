@@ -47,7 +47,7 @@
                             }}">
                                 {{ trade.gainEuro is not null ? trade.gainEuro|number_format(2) ~ ' €' : '-' }}
                             </div>
-                            {% if trade.finalRR %}
+                            {% if trade.finalRR is not null %}
                                 <span class="badge bg-{{ trade.finalRR > 1 ? 'success' : 'warning' }}">
                                 RR: {{ trade.finalRR }}
                             </span>
@@ -111,7 +111,7 @@
                             <div class="row mb-3">
                                 <div class="col-sm-4 fw-bold">RR final:</div>
                                 <div class="col-sm-8">
-                                    {% if trade.finalRR %}
+                                    {% if trade.finalRR is not null %}
                                         <span class="badge bg-{{ trade.finalRR > 1 ? 'success' : 'warning' }}">
                                         {{ trade.finalRR }}
                                     </span>
