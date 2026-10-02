@@ -8,8 +8,7 @@ Trading Tracker is a Symfony 7.4 LTS / PHP 8.5 web application for tracking and
 analyzing trades. PostgreSQL + Doctrine ORM (DBAL 4), Twig + Stimulus.js/Hotwired
 Turbo frontend (Asset Mapper, no build step), screenshots on Cloudflare R2,
 error monitoring via Sentry (prod only). The broker account feeds the API via
-the `ctrader-daemon/` container (cTrader Open API); the two cTrader cBots in
-`ctrader/` are the local fallback.
+the `ctrader-daemon/` container (cTrader Open API).
 
 **Production is live** at https://trading-tracker.freeddns.org (DigitalOcean droplet,
 Docker Compose). The old Mac mini deployment is obsolete.
@@ -23,8 +22,7 @@ Read these before diving into the code — they are written to orient an AI quic
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Stack, ER diagram of all entities, request flow, auth (form + Firebase), R2 screenshot pipeline, routes |
 | [docs/PRODUCTION.md](docs/PRODUCTION.md) | **Prod runbook**: infra diagram, deploy procedure (with the cache:clear trap), SSL/renewal, env vars, troubleshooting |
 | [docs/API.md](docs/API.md) | REST API reference (`/api/*`) |
-| [ctrader-daemon/README.md](ctrader-daemon/README.md) | Python daemon (cTrader Open API): auto-tracking of positions via the API, and the rollover stop-loss guard (17:00 New York) |
-| [ctrader/README.md](ctrader/README.md) | The two cTrader cBots — local fallback of the daemon (cloud execution blocks HTTP) |
+| [ctrader-daemon/README.md](ctrader-daemon/README.md) | Python daemon (cTrader Open API): auto-tracking of positions via the API, and the rollover stop-loss guard (17:00 New York). Replaced the former cTrader cBots (removed 2026-10-02) |
 | [docs/plans/](docs/plans/) | Historical/feature plans. `macmini-deployment.md`, `oracle-cloud-deployment.md`, `railway-deployment.md` are **obsolete** (superseded by the droplet); others describe shipped or planned features |
 
 ## Common Commands
@@ -102,7 +100,7 @@ Ask two questions and act on them:
 1. **Does the documentation need updating?** Keep docs lean — they are loaded
    into AI agents' context, so bloat has a real cost. In order of preference:
    explicit variable/class/function names, clean code comments, a dedicated
-   README for self-contained directories (like `ctrader/`), and only add to the
+   README for self-contained directories (like `ctrader-daemon/`), and only add to the
    global docs (`CLAUDE.md`, `docs/`) when genuinely necessary.
 2. **Does the change need unit or integration tests?** Add them in the same
    commit when it does.

@@ -39,8 +39,8 @@ def normalize_symbol(symbol_name: str) -> str | None:
 
 def compute_risk_percentage(entry: float, stop_loss: float, volume_units: float,
                             quote_to_deposit_rate: float, max_risk: float) -> float:
-    """Perte au SL en devise du compte, en % du risque max — même formule que le
-    cBot (|entrée − SL| × volume = perte en devise de cotation, convertie)."""
+    """Perte au SL en devise du compte, en % du risque max
+    (|entrée − SL| × volume = perte en devise de cotation, convertie)."""
     loss = abs(entry - stop_loss) * volume_units * quote_to_deposit_rate
     return round(loss / max_risk * 100.0, 2)
 

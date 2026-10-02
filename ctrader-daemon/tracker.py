@@ -1,5 +1,5 @@
-"""Tracker : porte la logique de TradingTrackerBot.cs sur les événements
-d'exécution Open API.
+"""Tracker : réplique les trades du compte dans Trading Tracker depuis les
+événements d'exécution Open API (reprend l'ex-cBot TradingTrackerBot.cs, supprimé).
 
 Purement événementiel (pas de rattrapage, choix assumé) :
 - fill d'ouverture        → POST /api/trades (si la position n'est pas déjà trackée)

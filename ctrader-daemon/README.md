@@ -1,19 +1,19 @@
 # ctrader-daemon
 
-Démon Python qui remplace les cBots (`ctrader/`) : connecté en permanence à la
-**cTrader Open API** (TCP+SSL, `live.ctraderapi.com:5035`), il reçoit les
-événements d'exécution du compte et alimente l'API Trading Tracker
-(`/api/trades`). Plan d'origine : [docs/plans/ctrader-open-api-daemon.html](../docs/plans/ctrader-open-api-daemon.html).
+Démon Python connecté en permanence à la **cTrader Open API** (TCP+SSL,
+`live.ctraderapi.com:5035`) : il reçoit les événements d'exécution du compte et
+alimente l'API Trading Tracker (`/api/trades`). Il a remplacé les cBots cTrader
+(`ctrader/`, supprimés du repo le 02/10/2026). Plan d'origine :
+[docs/plans/ctrader-open-api-daemon.html](../docs/plans/ctrader-open-api-daemon.html).
 
 **En prod depuis le 01/10/2026** sur le droplet (service `ctrader-daemon` de
-`compose.prod.yaml`) : tracker actif, rollover guard **désactivé**
-(`GUARD_ENABLED=false`) — voir [État et bascule](#état-et-bascule-du-guard).
+`compose.prod.yaml`) : tracker actif, rollover guard **actif depuis le
+02/10/2026** — voir [Rollover guard](#rollover-guard).
 
 **Garde-fou financier : ce démon ne passe jamais d'ordre.** Aucun code
 d'ouverture, de clôture ou de changement de volume n'existe ici, par
 construction. La seule écriture broker existante est l'amendement de SL du
-rollover guard (`ProtoOAAmendPositionSLTPReq`), inactive tant que
-`GUARD_ENABLED=false`.
+rollover guard (`ProtoOAAmendPositionSLTPReq`).
 
 ## Modules
 
@@ -63,19 +63,29 @@ introuvable → **taux 1.0 + warning** : le risque est alors approximatif mais
 jamais absent — ce warning dans les logs est le signal d'un vrai écart.
 `initialRR = |TP − entrée| / |SL − entrée|`.
 
-## État et bascule du guard
+## Rollover guard
 
-Tant que `GUARD_ENABLED=false` (état actuel), le démon n'écrit **rien** chez le
-broker : le cBot local `RolloverStopLossGuard` doit continuer à tourner pendant
-les fenêtres de rollover (voir `rollover.py` — mêmes horaires des deux côtés).
-Le `TradingTrackerBot` local est, lui, déjà remplacé.
-
-Pour activer le guard (après validation du tracker sur des trades réels, dont
-le `riskPercentage` vs cBot) : passer `GUARD_ENABLED=true` dans le `.env` du
-droplet puis recréer le service —
+**Actif depuis le 02/10/2026** (`GUARD_ENABLED=true` dans le `.env` du
+droplet). Fenêtres définies dans `rollover.py` (tableau des modules ci-dessus).
+Pour le désactiver : `GUARD_ENABLED=false` puis
 `docker compose -f compose.prod.yaml up -d --force-recreate ctrader-daemon`
-(un simple `restart` ne relit pas le `.env`). **Ensuite seulement**, arrêter le
-cBot guard local : jamais les deux guards en même temps.
+(un simple `restart` ne relit pas le `.env`).
+
+Comportement en cas d'incident :
+
+- **Démon arrêté pendant une fenêtre** : les niveaux sont en base (historique
+  `stopLosses`), pas en RAM — restauration au prochain démarrage hors fenêtre.
+- **Prix ayant traversé le niveau pendant la fenêtre** : le broker refuse la
+  remise → warning dans les logs, SL à replacer à la main (la position n'est
+  **jamais** fermée automatiquement).
+- **Position non trackée en base** : jamais touchée, ni au retrait ni à la remise.
+- **SL remis à la main pendant une fenêtre** : retiré de nouveau (après
+  sauvegarde en base, comme toujours).
+
+⚠ Pendant la fenêtre, les positions tournent **sans filet** : ~1h20 par soir en
+semaine ; le week-end, l'exposition réelle se limite à vendredi 16h45–17h00 et
+dimanche 17h00–18h15 (marché fermé entre les deux). Compromis assumé contre les
+sorties sur spread de rollover et les gaps d'ouverture du dimanche.
 
 ## Configuration (env)
 
@@ -86,8 +96,8 @@ cBot guard local : jamais les deux guards en même temps.
 | `CTRADER_ACCESS_TOKEN` / `CTRADER_REFRESH_TOKEN` | Tokens OAuth initiaux (flow décrit dans le plan) |
 | `CTRADER_ACCOUNT_ID` | `ctidTraderAccountId` du compte à suivre |
 | `TRADING_TRACKER_API_URL` | Base de l'API (`https://trading-tracker.freeddns.org` en prod) |
-| `TRADING_TRACKER_API_TOKEN` | Token personnel (profil → Token API cTrader), le même que les cBots |
-| `MAX_RISK_EURO` | Base du `riskPercentage`, comme le paramètre « Max Risk » des cBots (défaut 500) |
+| `TRADING_TRACKER_API_TOKEN` | Token personnel (profil → Token API cTrader) |
+| `MAX_RISK_EURO` | Base du `riskPercentage` (défaut 500) |
 | `GUARD_ENABLED` | `true` active le rollover guard (défaut **false** : zéro écriture broker). Les horaires des fenêtres sont fixés dans `rollover.py` |
 | `CTRADER_TOKENS_FILE` | Persistance des tokens rafraîchis (défaut `tokens.json`, `/data/tokens.json` en conteneur — volume requis) |
 | `HEALTH_FILE` | Fichier touché à chaque message reçu (healthcheck Docker) |

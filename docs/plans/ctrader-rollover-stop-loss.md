@@ -1,9 +1,10 @@
 > **Statut : implémenté (2026-09-18), avec un design différent de ce plan.**
-> Le bot livré est `ctrader/RolloverStopLossGuard.cs` : fenêtre calée sur
+> Le bot livré était `ctrader/RolloverStopLossGuard.cs` : fenêtre calée sur
 > 17h00 America/New_York (et non des heures françaises fixes), et SL persistés
-> dans l'historique `trade.stopLosses` via l'API (et non en RAM).
-> Voir [ctrader/README.md](../../ctrader/README.md). Ce plan est conservé pour
-> l'historique du raisonnement.
+> dans l'historique `trade.stopLosses` via l'API (et non en RAM). Les cBots ont
+> été supprimés le 2026-10-02, remplacés par le rollover guard du démon — voir
+> [ctrader-daemon/README.md](../../ctrader-daemon/README.md). Ce plan est
+> conservé pour l'historique du raisonnement.
 
 # Plan : Protection spread nocturne — TradingTrackerBot.cs
 

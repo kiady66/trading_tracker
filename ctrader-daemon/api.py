@@ -1,4 +1,4 @@
-"""Client REST Trading Tracker (/api/trades) — mêmes appels que les cBots.
+"""Client REST Trading Tracker (/api/trades).
 
 Les requêtes (bibliothèque requests, synchrone) tournent dans le threadpool de
 Twisted pour ne jamais bloquer le réacteur. Chaque appel est loggé avec sa

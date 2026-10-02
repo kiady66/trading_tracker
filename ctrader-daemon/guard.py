@@ -1,4 +1,4 @@
-"""Rollover guard : porte RolloverStopLossGuard.cs.
+"""Rollover guard (reprend l'ex-cBot RolloverStopLossGuard.cs, supprimé).
 
 Retire les stop loss avant le rollover quotidien (17h00 New York, où le spread
 s'élargit) et les restaure une fois le spread calmé — fenêtres définies dans
