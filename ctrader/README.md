@@ -3,8 +3,12 @@
 > ⚠ **Solution de secours locale.** Le suivi du compte est assuré en prod par le
 > démon [`ctrader-daemon/`](../ctrader-daemon/README.md) (cTrader Open API),
 > qui tourne sur le droplet 24/7. Ces cBots restent utilisables **en local
-> uniquement** (bouton *play*, cTrader Desktop allumé) si le démon est arrêté.
-> Ne pas faire tourner le guard des deux côtés en même temps.
+> uniquement** (bouton *play*, cTrader Desktop allumé).
+>
+> **État actuel** : `TradingTrackerBot` est remplacé par le démon ;
+> `RolloverStopLossGuard` reste **volontairement actif en local** tant que le
+> guard du démon est désactivé (`GUARD_ENABLED=false`, période d'observation).
+> Ne jamais faire tourner le guard des deux côtés en même temps.
 
 Deux robots cTrader qui relient le compte de trading à l'application via
 l'[API REST](../docs/API.md) (`/api/trades`), authentifiés par le token

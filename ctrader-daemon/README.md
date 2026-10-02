@@ -2,13 +2,18 @@
 
 Démon Python qui remplace les cBots (`ctrader/`) : connecté en permanence à la
 **cTrader Open API** (TCP+SSL, `live.ctraderapi.com:5035`), il reçoit les
-événements d'exécution du compte et alimentera l'API Trading Tracker
-(`/api/trades`). Plan complet : [docs/plans/ctrader-open-api-daemon.html](../docs/plans/ctrader-open-api-daemon.html).
+événements d'exécution du compte et alimente l'API Trading Tracker
+(`/api/trades`). Plan d'origine : [docs/plans/ctrader-open-api-daemon.html](../docs/plans/ctrader-open-api-daemon.html).
+
+**En prod depuis le 01/10/2026** sur le droplet (service `ctrader-daemon` de
+`compose.prod.yaml`) : tracker actif, rollover guard **désactivé**
+(`GUARD_ENABLED=false`) — voir [État et bascule](#état-et-bascule-du-guard).
 
 **Garde-fou financier : ce démon ne passe jamais d'ordre.** Aucun code
 d'ouverture, de clôture ou de changement de volume n'existe ici, par
-construction. La seule écriture broker prévue (phase 3) est l'amendement de SL
-du rollover guard (`ProtoOAAmendPositionSLTPReq`).
+construction. La seule écriture broker existante est l'amendement de SL du
+rollover guard (`ProtoOAAmendPositionSLTPReq`), inactive tant que
+`GUARD_ENABLED=false`.
 
 ## Modules
 
@@ -22,6 +27,53 @@ du rollover guard (`ProtoOAAmendPositionSLTPReq`).
 | `api.py` | Client REST `/api/trades` (requests dans le threadpool Twisted), chaque appel loggé avec son code HTTP |
 
 Tests : `python3 -m unittest discover tests` (fonctions pures, sans SDK).
+
+## Cycle de vie d'un trade (tracker)
+
+Le serveur Spotware **pousse** un `ProtoOAExecutionEvent` à chaque exécution sur
+le compte (ordre passé depuis n'importe quel appareil) ; le démon ne fait qu'y
+réagir :
+
+| Événement cTrader | Action côté API |
+|---|---|
+| **Ouverture** (fill sans `closePositionDetail`) | `POST /api/trades` : asset normalisé, `buy/sell market`, date et prix d'entrée, volume, `ctraderPositionId`, et si définis SL (+ `riskPercentage`) et TP (+ `initialRR`). **Sans SL : `riskPercentage = 100` + warning ⚠.** Position déjà trackée (renforcement, événement reçu deux fois) → bascule sur la mise à jour SL/risque, jamais de doublon |
+| **SL/TP déplacé** (ordre `STOP_LOSS_TAKE_PROFIT`) | `PATCH` : nouveau SL (ajouté à l'historique `stopLosses` côté API), risque et RR recalculés sur le volume courant. SL retiré (ex. par le guard) → rien n'est envoyé |
+| **Clôture** partielle ou totale (fill avec `closePositionDetail`) | `PATCH {exit: {dealId, price, volume, date}}`, idempotent par `dealId` ; + `closed: true` si la position est totalement fermée — l'API fixe alors `exitDate` et calcule `finalRR`/gains |
+
+Symbole non supporté ou position inconnue en base → ignoré avec un log
+(« pas de rattrapage » : un trade ouvert pendant une coupure du démon est à
+créer manuellement dans l'app).
+
+## Calcul du risque
+
+```
+riskPercentage = |entrée − SL| × volume en unités × taux / MAX_RISK_EURO × 100
+```
+
+(arrondi à 2 décimales — `mapping.compute_risk_percentage` ; `entrée` = prix
+moyen de la position, volumes Open API en centièmes d'unités ÷ 100, prix spot
+en 1/100000.)
+
+Le `taux` convertit la devise de cotation vers la devise du compte (USD) :
+1.0 si identiques (EUR/USD, XAU/USD, indices…) ; sinon bid de la paire directe
+ou 1/bid de la paire inverse (ex. JPY → USD via `USDJPY`), obtenu par
+souscription spot éphémère et mis en cache 30 min (`symbols.py`). Paire ou tick
+introuvable → **taux 1.0 + warning** : le risque est alors approximatif mais
+jamais absent — ce warning dans les logs est le signal d'un vrai écart.
+`initialRR = |TP − entrée| / |SL − entrée|`.
+
+## État et bascule du guard
+
+Tant que `GUARD_ENABLED=false` (état actuel), le démon n'écrit **rien** chez le
+broker : le cBot local `RolloverStopLossGuard` doit continuer à tourner autour
+de 17h00 NY. Le `TradingTrackerBot` local est, lui, déjà remplacé.
+
+Pour activer le guard (après validation du tracker sur des trades réels, dont
+le `riskPercentage` vs cBot) : passer `GUARD_ENABLED=true` dans le `.env` du
+droplet puis recréer le service —
+`docker compose -f compose.prod.yaml up -d --force-recreate ctrader-daemon`
+(un simple `restart` ne relit pas le `.env`). **Ensuite seulement**, arrêter le
+cBot guard local : jamais les deux guards en même temps.
 
 ## Configuration (env)
 

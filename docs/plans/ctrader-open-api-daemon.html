@@ -62,6 +62,13 @@
   <h1>Démon cTrader Open API</h1>
   <p class="subtitle">Remplacer les deux cBots par un service serveur connecté à l'Open API de Spotware — tracking des trades et rollover guard en 24/7, sans cTrader Desktop ni exécution cloud. <span class="muted">Plan du 29/09/2026.</span></p>
 
+  <div class="card done-criteria">
+    <strong>✅ Livré le 01/10/2026</strong> — phases 0 à 5 réalisées, démon en prod
+    (healthy, tracker actif). Le rollover guard reste <code>GUARD_ENABLED=false</code>
+    pendant la période d'observation (phase 4) : le cBot guard local reste en service.
+    Doc de référence à jour : <code>ctrader-daemon/README.md</code> (ce plan est historique).
+  </div>
+
   <div class="card context">
     <strong>Pourquoi ce chantier.</strong> L'exécution cloud gratuite de cTrader
     <a href="https://help.ctrader.com/ctrader-algo/documentation/cbots/cloud-requirements/">bloque toutes les requêtes HTTP sortantes</a>
