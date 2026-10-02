@@ -4,8 +4,8 @@
 Connexion TCP+SSL, authentification application + compte, keepalive (géré par
 le SDK), rafraîchissement automatique des tokens, puis :
 - tracker (tracker.py)  : réplique les trades du compte dans Trading Tracker ;
-- rollover guard (guard.py) : retire/restaure les SL autour de 17h00 New York
-  (désactivé par défaut — GUARD_ENABLED).
+- rollover guard (guard.py) : retire/restaure les SL autour du rollover de
+  17h00 New York — fenêtres dans rollover.py (désactivé par défaut — GUARD_ENABLED).
 
 GARDE-FOU FINANCIER : ce démon ne passe JAMAIS d'ordre. Aucune requête
 d'ouverture, de clôture ou de modification de volume n'est implémentée. La
@@ -108,8 +108,6 @@ class Daemon:
         self.guard = RolloverGuard(
             self.client, api, self.account_id,
             enabled=os.environ.get("GUARD_ENABLED", "false").lower() in ("1", "true", "yes"),
-            minutes_before=int(os.environ.get("GUARD_MINUTES_BEFORE", "5")),
-            minutes_after=int(os.environ.get("GUARD_MINUTES_AFTER", "10")),
         )
 
     def run(self) -> None:

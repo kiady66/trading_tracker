@@ -21,7 +21,8 @@ rollover guard (`ProtoOAAmendPositionSLTPReq`), inactive tant que
 |---|---|
 | `daemon.py` | Connexion, auth app + compte, keepalive (SDK), refresh des tokens, dispatch des événements |
 | `tracker.py` | Réplique les trades : POST à l'ouverture, PATCH aux changements de SL/TP et aux clôtures (partielles/totales). Purement événementiel — **pas de rattrapage** (choix assumé) |
-| `guard.py` | Rollover guard : SL sauvé en base **avant** retrait à 17h00 NY −5 min, restauré +10 min après — uniquement sur les positions trackées. `ProtoOAReconcileReq` sert en lecture seule à lister les positions |
+| `guard.py` | Rollover guard : SL sauvé en base **avant** retrait, restauré en fin de fenêtre — uniquement sur les positions trackées. `ProtoOAReconcileReq` sert en lecture seule à lister les positions |
+| `rollover.py` | Fenêtres du guard (fonction pure, heure de New York) : lun–jeu retrait **16h55** → remise **18h15** (le temps que le spread se calme) ; **vendredi 16h45 → dimanche 18h15** en une seule fenêtre de week-end (marché fermé entre les deux, remise après le spread d'ouverture du dimanche) |
 | `symbols.py` | Catalogue symbolId → asset ; taux de conversion devise de cotation → devise du compte (spot éphémère, cache 30 min) pour le calcul du risque |
 | `mapping.py` | Fonctions pures : normalisation des symboles (`EURUSD.i → EUR/USD`, `USWTI → USOIL`), % de risque, RR initial. **À resynchroniser avec `Trade::ALLOWED_ASSETS`** |
 | `api.py` | Client REST `/api/trades` (requests dans le threadpool Twisted), chaque appel loggé avec son code HTTP |
@@ -65,8 +66,9 @@ jamais absent — ce warning dans les logs est le signal d'un vrai écart.
 ## État et bascule du guard
 
 Tant que `GUARD_ENABLED=false` (état actuel), le démon n'écrit **rien** chez le
-broker : le cBot local `RolloverStopLossGuard` doit continuer à tourner autour
-de 17h00 NY. Le `TradingTrackerBot` local est, lui, déjà remplacé.
+broker : le cBot local `RolloverStopLossGuard` doit continuer à tourner pendant
+les fenêtres de rollover (voir `rollover.py` — mêmes horaires des deux côtés).
+Le `TradingTrackerBot` local est, lui, déjà remplacé.
 
 Pour activer le guard (après validation du tracker sur des trades réels, dont
 le `riskPercentage` vs cBot) : passer `GUARD_ENABLED=true` dans le `.env` du
@@ -86,8 +88,7 @@ cBot guard local : jamais les deux guards en même temps.
 | `TRADING_TRACKER_API_URL` | Base de l'API (`https://trading-tracker.freeddns.org` en prod) |
 | `TRADING_TRACKER_API_TOKEN` | Token personnel (profil → Token API cTrader), le même que les cBots |
 | `MAX_RISK_EURO` | Base du `riskPercentage`, comme le paramètre « Max Risk » des cBots (défaut 500) |
-| `GUARD_ENABLED` | `true` active le rollover guard (défaut **false** : zéro écriture broker) |
-| `GUARD_MINUTES_BEFORE` / `GUARD_MINUTES_AFTER` | Fenêtre autour de 17h00 NY (défauts 5 / 10) |
+| `GUARD_ENABLED` | `true` active le rollover guard (défaut **false** : zéro écriture broker). Les horaires des fenêtres sont fixés dans `rollover.py` |
 | `CTRADER_TOKENS_FILE` | Persistance des tokens rafraîchis (défaut `tokens.json`, `/data/tokens.json` en conteneur — volume requis) |
 | `HEALTH_FILE` | Fichier touché à chaque message reçu (healthcheck Docker) |
 | `LOG_LEVEL` | `DEBUG` pour le détail complet des événements (défaut `INFO`) |

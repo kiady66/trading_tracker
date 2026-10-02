@@ -8,7 +8,13 @@ namespace cAlgo.Robots
 {
     /// <summary>
     /// Retire temporairement les stop loss avant le rollover quotidien (swap) et les
-    /// restaure juste après, pour éviter d'être sorti par l'élargissement du spread.
+    /// restaure une fois le spread calmé, pour éviter d'être sorti par son élargissement.
+    ///
+    /// Fenêtres (heure de New York, identiques à ctrader-daemon/rollover.py) :
+    /// lundi–jeudi retrait 16h55 → remise 18h15 ; vendredi retrait 16h45 → remise
+    /// dimanche 18h15 (le marché ferme vendredi 17h00 et rouvre dimanche 17h00 sur
+    /// un spread d'ouverture élargi et d'éventuels gaps — entre les deux il est
+    /// fermé, les positions ne risquent rien sans SL).
     ///
     /// Le rollover a lieu à 17h00 heure de New York, soit 23h00 à Paris la plupart de
     /// l'année — mais 22h00 pendant les quelques semaines où les États-Unis ont changé
@@ -36,11 +42,11 @@ namespace cAlgo.Robots
         [Parameter("API Token", DefaultValue = "")]
         public string ApiToken { get; set; }
 
-        [Parameter("Minutes avant rollover (retrait SL)", DefaultValue = 5, MinValue = 1, MaxValue = 60)]
-        public int MinutesBefore { get; set; }
+        // ── Fenêtres (heure de New York) ──────────────────────────────────────
 
-        [Parameter("Minutes après rollover (remise SL)", DefaultValue = 10, MinValue = 1, MaxValue = 120)]
-        public int MinutesAfter { get; set; }
+        private static readonly TimeSpan RemoveWeekday = new TimeSpan(16, 55, 0); // lundi–jeudi
+        private static readonly TimeSpan RemoveFriday  = new TimeSpan(16, 45, 0); // avant la fermeture de 17h00
+        private static readonly TimeSpan Restore       = new TimeSpan(18, 15, 0); // lundi–jeudi et dimanche
 
         // ── État ──────────────────────────────────────────────────────────────
 
@@ -69,8 +75,8 @@ namespace cAlgo.Robots
             Timer.Start(TimeSpan.FromSeconds(10));
 
             var ny = TimeZoneInfo.ConvertTimeFromUtc(Server.TimeInUtc, _newYork);
-            Print($"[RolloverGuard] ✓ Démarré. Rollover à 17h00 New York (actuellement {ny:HH\\:mm} à NY). " +
-                  $"Retrait des SL {MinutesBefore} min avant, remise {MinutesAfter} min après. API: {ApiBaseUrl}");
+            Print($"[RolloverGuard] ✓ Démarré (actuellement {ny:HH\\:mm} à NY). Retrait des SL à 16h55 NY " +
+                  $"(16h45 le vendredi), remise à 18h15 NY (dimanche 18h15 pour le week-end). API: {ApiBaseUrl}");
 
             // Récupération : si le bot a été arrêté pendant la fenêtre de rollover,
             // les SL retirés sont toujours en DB — on les restaure au démarrage.
@@ -107,11 +113,20 @@ namespace cAlgo.Robots
             }
         }
 
-        private bool IsInRolloverWindow(DateTime newYorkTime)
+        private static bool IsInRolloverWindow(DateTime newYorkTime)
         {
-            var rollover = newYorkTime.Date.AddHours(17);
-            return newYorkTime >= rollover.AddMinutes(-MinutesBefore)
-                && newYorkTime < rollover.AddMinutes(MinutesAfter);
+            var time = newYorkTime.TimeOfDay;
+            switch (newYorkTime.DayOfWeek)
+            {
+                case DayOfWeek.Friday:   // entrée dans la fenêtre de week-end
+                    return time >= RemoveFriday;
+                case DayOfWeek.Saturday: // marché fermé, SL laissés retirés
+                    return true;
+                case DayOfWeek.Sunday:   // remise après l'ouverture de 17h00
+                    return time < Restore;
+                default:                 // lundi–jeudi : fenêtre quotidienne
+                    return time >= RemoveWeekday && time < Restore;
+            }
         }
 
         // ── Retrait des SL (persistés en DB au préalable) ─────────────────────

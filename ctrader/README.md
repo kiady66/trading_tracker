@@ -83,12 +83,20 @@ sont ignorés avec un message dans le journal.
 Le spread s'élargit fortement au **rollover quotidien (swap)** et peut sortir
 des positions sur leur stop loss. Ce bot :
 
-1. **Avant le rollover** (5 min par défaut) : pour chaque position avec SL,
-   pousse d'abord le niveau courant dans l'historique `stopLosses` du trade via
-   l'API, **puis** retire le SL de la position. Si l'API est injoignable, le SL
-   est laissé en place (le niveau ne doit jamais être perdu).
-2. **Après le rollover** (10 min par défaut) : remet sur chaque position sans SL
-   le **dernier élément** de la liste `stopLosses` de son trade.
+1. **À l'ouverture de la fenêtre** : pour chaque position avec SL, pousse
+   d'abord le niveau courant dans l'historique `stopLosses` du trade via l'API,
+   **puis** retire le SL de la position. Si l'API est injoignable, le SL est
+   laissé en place (le niveau ne doit jamais être perdu).
+2. **À la fermeture de la fenêtre** : remet sur chaque position sans SL le
+   **dernier élément** de la liste `stopLosses` de son trade.
+
+Fenêtres (heure de New York, codées en dur — identiques à
+`ctrader-daemon/rollover.py`) :
+
+| Jour | Retrait du SL | Remise du SL |
+|---|---|---|
+| Lundi–jeudi | 16h55 | 18h15 (le spread reste large bien après 17h00) |
+| Vendredi → dimanche | vendredi 16h45 | **dimanche 18h15** — une seule fenêtre de week-end : le marché ferme vendredi 17h00 et rouvre dimanche 17h00 sur un spread élargi (et d'éventuels gaps) ; entre les deux il est fermé, les positions ne risquent rien sans SL |
 
 ### Pourquoi 17h00 New York et pas « 23h en France »
 
@@ -105,8 +113,6 @@ Paramètres :
 |---|---|---|
 | API Base URL | `https://trading-tracker.freeddns.org` | URL de l'application |
 | API Token | *(vide)* | Token personnel — obligatoire |
-| Minutes avant rollover (retrait SL) | 5 | Ouverture de la fenêtre avant 17h00 NY |
-| Minutes après rollover (remise SL) | 10 | Fermeture de la fenêtre après 17h00 NY |
 
 ### Comportement en cas d'incident
 
@@ -119,9 +125,13 @@ Paramètres :
 - **Position non trackée** (pas de trade avec ce `ctraderPositionId`) : le bot
   n'y touche pas, ni au retrait ni à la restauration.
 
-⚠ Pendant la fenêtre (~15 min par défaut), les positions tournent **sans filet** :
-un mouvement violent ne serait pas coupé. C'est le compromis assumé contre les
-sorties sur spread de rollover.
+⚠ Pendant la fenêtre, les positions tournent **sans filet** : un mouvement
+violent ne serait pas coupé. En semaine ça représente ~1h20 par soir ; le
+week-end, l'exposition réelle est vendredi 16h45–17h00 et dimanche 17h00–18h15
+(le marché est fermé le reste du temps). C'est le compromis assumé contre les
+sorties sur spread de rollover et les gaps d'ouverture du dimanche. À noter :
+un SL remis à la main pendant une fenêtre est retiré de nouveau par le bot
+(après sauvegarde en base).
 
 ## Interaction entre les deux bots
 

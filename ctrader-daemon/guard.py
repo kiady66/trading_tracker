@@ -1,9 +1,11 @@
 """Rollover guard : porte RolloverStopLossGuard.cs.
 
-Retire les stop loss juste avant le rollover quotidien (17h00 New York, où le
-spread s'élargit) et les restaure juste après. Le niveau est TOUJOURS persisté
-en base (historique `stopLosses` du trade) AVANT le retrait — si l'API échoue,
-le SL est laissé en place.
+Retire les stop loss avant le rollover quotidien (17h00 New York, où le spread
+s'élargit) et les restaure une fois le spread calmé — fenêtres définies dans
+rollover.py (retrait 16h55 lun–jeu, 16h45 le vendredi ; remise 18h15, le
+dimanche pour le week-end). Le niveau est TOUJOURS persisté en base (historique
+`stopLosses` du trade) AVANT le retrait — si l'API échoue, le SL est laissé en
+place.
 
 Seule écriture broker de tout le démon : ProtoOAAmendPositionSLTPReq (amender
 le SL/TP d'une position existante). Ne touche qu'aux positions liées à un trade
@@ -25,21 +27,19 @@ from ctrader_open_api.messages.OpenApiMessages_pb2 import (
 from twisted.internet import defer
 from twisted.internet.task import LoopingCall
 
+from rollover import is_in_rollover_window
+
 log = logging.getLogger("ctrader-daemon.guard")
 
 NEW_YORK = ZoneInfo("America/New_York")
-ROLLOVER_HOUR = 17
 
 
 class RolloverGuard:
-    def __init__(self, client, api, account_id: int, enabled: bool,
-                 minutes_before: int = 5, minutes_after: int = 10):
+    def __init__(self, client, api, account_id: int, enabled: bool):
         self.client = client
         self.api = api
         self.account_id = account_id
         self.enabled = enabled
-        self.minutes_before = minutes_before
-        self.minutes_after = minutes_after
         self._in_window = False
         self._loop = None
 
@@ -49,8 +49,8 @@ class RolloverGuard:
             return
         if self._loop is not None:
             return
-        log.info("Rollover guard actif : retrait des SL %d min avant 17h00 NY, remise %d min après",
-                 self.minutes_before, self.minutes_after)
+        log.info("Rollover guard actif : retrait des SL à 16h55 NY (16h45 le vendredi), "
+                 "remise à 18h15 NY (dimanche 18h15 pour le week-end)")
         self._loop = LoopingCall(self._tick)
         self._loop.start(10, now=False)
         # Récupération : démon arrêté pendant la fenêtre → SL toujours en DB,
@@ -63,9 +63,7 @@ class RolloverGuard:
         return datetime.now(tz=NEW_YORK)
 
     def _is_in_window(self, now: datetime) -> bool:
-        rollover = now.replace(hour=ROLLOVER_HOUR, minute=0, second=0, microsecond=0)
-        seconds = (now - rollover).total_seconds()
-        return -self.minutes_before * 60 <= seconds < self.minutes_after * 60
+        return is_in_rollover_window(now)
 
     def _tick(self):
         if self._is_in_window(self._now_ny()):
