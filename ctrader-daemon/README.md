@@ -39,7 +39,7 @@ réagir :
 |---|---|
 | **Ouverture** (fill sans `closePositionDetail`) | `POST /api/trades` : asset normalisé, `buy/sell market`, date et prix d'entrée, volume, `ctraderPositionId`, et si définis SL (+ `riskPercentage`) et TP (+ `initialRR`). **Sans SL : `riskPercentage = 100` + warning ⚠.** Position déjà trackée (renforcement, événement reçu deux fois) → bascule sur la mise à jour SL/risque, jamais de doublon |
 | **SL/TP déplacé** (ordre `STOP_LOSS_TAKE_PROFIT`) | `PATCH` : nouveau SL (ajouté à l'historique `stopLosses` côté API), risque et RR recalculés sur le volume courant. SL retiré (ex. par le guard) → rien n'est envoyé |
-| **Clôture** partielle ou totale (fill avec `closePositionDetail`) | `PATCH {exit: {dealId, price, volume, date}}`, idempotent par `dealId` ; + `closed: true` si la position est totalement fermée — l'API fixe alors `exitDate` et calcule `finalRR`/gains |
+| **Clôture** partielle ou totale (fill avec `closePositionDetail`) | `PATCH {exit: {dealId, price, volume, date, netProfit}}`, idempotent par `dealId` ; + `closed: true` si totalement fermée — l'API fixe alors `exitDate` et calcule `finalRR`/gains **en net** (`netProfit` = brut + swap + commission − frais de conversion, loggé avec ses composantes pour recouper avec cTrader) |
 
 Symbole non supporté ou position inconnue en base → ignoré avec un log
 (« pas de rattrapage » : un trade ouvert pendant une coupure du démon est à

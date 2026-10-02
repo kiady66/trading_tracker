@@ -139,15 +139,17 @@ Content-Type: application/json
 | `entryPrice` | number\|null | Fill price at execution |
 | `targetPrice` | number\|null | Take profit at execution (basis of the computed `initialRR`) |
 | `volumeInUnits` | number\|null | Opening volume in cTrader units (weighting basis for partial exits) |
-| `exit` | object\|null | **Append-only**: one closing deal `{dealId, price, volume, date}`. Idempotent — an already-known `dealId` is ignored |
+| `exit` | object\|null | **Append-only**: one closing deal `{dealId, price, volume, date, netProfit?}`. `netProfit` = broker net P&L of that deal (commissions and swaps included, account currency). Idempotent — an already-known `dealId` is ignored |
 | `exits` | object[]\|null | Full replacement of the exits list (manual edits) |
 | `closed` | bool | `true` closes the trade: sets `exitDate` from the last exit (or now) if not already set |
 
 **Server-side RR calculations** (never overwrite a manually provided value):
 `initialRR` = target distance ÷ initial risk distance (entry ↔ first `stopLosses` entry).
-On close (`closed: true`, or cumulated exit volume ≥ `volumeInUnits`), `finalRR` =
-Σ over exits of (exit volume ÷ `volumeInUnits`) × signed R of that exit — each exit's R
-is always measured against the *initial* risk distance, negative on a loss.
+On close (`closed: true`, or cumulated exit volume ≥ `volumeInUnits`), when **every**
+exit carries `netProfit`: `finalRR` = Σ `netProfit` ÷ (`riskPercentage` × `maxRiskEuro`)
+and `gainEuro` = Σ `netProfit` exactly — fees count in the R. Otherwise (manual or
+pre-10/2026 trades): `finalRR` = Σ over exits of (exit volume ÷ `volumeInUnits`) ×
+signed R of that exit, measured against the *initial* risk distance.
 
 **Example request**
 

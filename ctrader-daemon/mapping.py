@@ -46,6 +46,17 @@ def compute_risk_percentage(entry: float, stop_loss: float, volume_units: float,
     return round(loss / max_risk * 100.0, 2)
 
 
+def compute_net_profit(gross_profit: int, swap: int, commission: int,
+                       pnl_conversion_fee: int, money_digits: int) -> float:
+    """P&L net d'une clôture en devise du compte, depuis ProtoOAClosePositionDetail.
+
+    gross/swap/commission sont signés par le broker (négatif = charge, un swap
+    peut être positif) ; le frais de conversion est toujours un coût, son signe
+    n'est pas fiable d'un broker à l'autre. Montants à l'échelle moneyDigits
+    (2 → centimes)."""
+    return (gross_profit + swap + commission - abs(pnl_conversion_fee)) / 10 ** money_digits
+
+
 def compute_initial_rr(entry: float, stop_loss: float, take_profit: float) -> float | None:
     sl_distance = abs(entry - stop_loss)
     if sl_distance <= 0:

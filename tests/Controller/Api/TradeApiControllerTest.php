@@ -778,6 +778,50 @@ class TradeApiControllerTest extends WebTestCase
         $this->assertEquals(-1.0, $data['finalRR']);
     }
 
+    public function testPatchSortieAvecNetProfitCalculeLeRREtLeGainEnNet(): void
+    {
+        $client = $this->bootClient();
+
+        // risque au SL = 1.5 % × 200.5 € = 3.0075 €
+        $this->mockRepoWithTrade($this->makeOpenTradeWithPrices(), 1);
+
+        $client->request('PATCH', '/api/trades/1', [], [], $this->authHeaders(), json_encode([
+            'exit'   => ['dealId' => 'd1', 'price' => 1.1150, 'volume' => 100000,
+                         'date' => '2024-06-04T15:00:00+00:00', 'netProfit' => 9.0],
+            'closed' => true,
+        ]));
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        // 9 € nets ÷ 3.0075 € de risque : commissions incluses, et non le 3.0R des prix
+        $this->assertEquals(2.99, $data['finalRR']);
+        $this->assertEquals(9.0, $data['gainEuro']);
+    }
+
+    public function testPatchSortieSansNetProfitRetombeSurLeCalculParPrix(): void
+    {
+        $client = $this->bootClient();
+        $client->disableReboot();
+
+        $trade = $this->makeOpenTradeWithPrices();
+        $this->mockRepoWithTrade($trade, 1);
+
+        // Première sortie nette, seconde sans net (ex: trade complété à la main)
+        $client->request('PATCH', '/api/trades/1', [], [], $this->authHeaders(), json_encode([
+            'exit' => ['dealId' => 'd1', 'price' => 1.1075, 'volume' => 50000,
+                       'date' => '2024-06-04T12:00:00+00:00', 'netProfit' => 2.0],
+        ]));
+        $client->request('PATCH', '/api/trades/1', [], [], $this->authHeaders(), json_encode([
+            'exit' => ['dealId' => 'd2', 'price' => 1.1150, 'volume' => 50000,
+                       'date' => '2024-06-04T15:00:00+00:00'],
+        ]));
+
+        $this->assertResponseStatusCodeSame(Response::HTTP_OK);
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertSame('closed', $data['status']);
+        $this->assertEquals(2.25, $data['finalRR']);
+    }
+
     public function testPatchFinalRRManuelPrioritaireSurLesSorties(): void
     {
         $client = $this->bootClient();

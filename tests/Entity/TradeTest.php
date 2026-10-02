@@ -397,6 +397,50 @@ class TradeTest extends TestCase
         $this->assertSame([1.0850, 1.0900, 1.0850], $this->trade->getStopLosses());
     }
 
+    public function testGetNetProfitTotalRequiresEveryExit(): void
+    {
+        $this->assertNull($this->trade->getNetProfitTotal());
+
+        $this->trade->addExit(1.1050, 50000.0, 'd1', null, -10.5);
+        $this->assertSame(-10.5, $this->trade->getNetProfitTotal());
+
+        // Une sortie sans net (édition manuelle) → on ne mélange pas net et brut
+        $this->trade->addExit(1.1100, 50000.0, 'd2', null);
+        $this->assertNull($this->trade->getNetProfitTotal());
+    }
+
+    public function testCalculateFinalRRFromNetProfit(): void
+    {
+        $this->trade->setRiskPercentage(2.0);
+        $this->trade->setMaxRiskEuro(100.0);   // risque au SL = 2 €
+        $this->trade->addExit(1.1050, 50000.0, 'd1', null, -1.0);
+        $this->trade->addExit(1.1020, 50000.0, 'd2', null, -0.5);
+        $this->trade->setExitDate(new \DateTime('2024-06-04'));
+
+        $this->trade->calculateFinalRR();
+        $this->trade->calculateGainRR();
+        $this->trade->calculateGainEuro();
+
+        $this->assertSame(-0.75, $this->trade->getFinalRR());
+        $this->assertSame(-1.5, $this->trade->getGainEuro());
+    }
+
+    public function testCalculateGainEuroPrefersNetOverDerivedRR(): void
+    {
+        $this->trade->setRiskPercentage(2.0);
+        $this->trade->setMaxRiskEuro(100.0);
+        $this->trade->addExit(1.1050, 100000.0, 'd1', null, -1.513);
+        $this->trade->setExitDate(new \DateTime('2024-06-04'));
+
+        $this->trade->calculateFinalRR();
+        $this->trade->calculateGainRR();
+        $this->trade->calculateGainEuro();
+
+        // finalRR arrondi (-0.76) aurait donné -1.52 € : le net exact prime
+        $this->assertSame(-0.76, $this->trade->getFinalRR());
+        $this->assertSame(-1.51, $this->trade->getGainEuro());
+    }
+
     public function testSetStopLossesReplacesHistory(): void
     {
         $this->trade->addStopLoss(1.0);

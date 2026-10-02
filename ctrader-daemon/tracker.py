@@ -4,7 +4,8 @@
 Purement événementiel (pas de rattrapage, choix assumé) :
 - fill d'ouverture        → POST /api/trades (si la position n'est pas déjà trackée)
 - SL/TP modifié           → PATCH {riskPercentage, stopLoss, initialRR}
-- fill de clôture (reçu)  → PATCH {exit: {...}} (+ closed sur la clôture totale)
+- fill de clôture (reçu)  → PATCH {exit: {..., netProfit}} (+ closed sur la
+  clôture totale) — netProfit = P&L net broker, commissions et swaps inclus
 
 Les événements sont traités EN SÉRIE (file FIFO) : un ordre limite avec SL/TP
 pré-programmés produit deux événements quasi simultanés (le fill, puis l'ordre
@@ -26,7 +27,7 @@ from ctrader_open_api.messages.OpenApiModelMessages_pb2 import (
 )
 from twisted.internet import defer
 
-from mapping import compute_initial_rr, compute_risk_percentage
+from mapping import compute_initial_rr, compute_net_profit, compute_risk_percentage
 
 log = logging.getLogger("ctrader-daemon.tracker")
 
@@ -172,12 +173,16 @@ class Tracker:
             return
 
         volume = (deal.filledVolume or deal.volume) / VOLUME_SCALE
+        detail = deal.closePositionDetail
+        net_profit = compute_net_profit(detail.grossProfit, detail.swap, detail.commission,
+                                        detail.pnlConversionFee, detail.moneyDigits)
         payload = {
             "exit": {
                 "dealId": str(deal.dealId),
                 "price": deal.executionPrice,
                 "volume": volume,
                 "date": iso_from_ms(deal.executionTimestamp),
+                "netProfit": net_profit,
             },
         }
         # Un fill de clôture totale peut arriver sans statut CLOSED (vu en prod
@@ -190,5 +195,8 @@ class Tracker:
         ok = yield self.api.patch_trade(trade["id"], payload)
         if ok:
             self._sent_deal_ids.add(deal.dealId)
-            log.info("✓ Trade #%s : sortie %s @ %s (deal #%s%s)", trade["id"], volume,
-                     deal.executionPrice, deal.dealId, ", clôture totale" if fully_closed else "")
+            # Les composantes du net sont loggées pour pouvoir recouper avec cTrader.
+            log.info("✓ Trade #%s : sortie %s @ %s, net %.2f (brut %s, swap %s, com. %s, deal #%s%s)",
+                     trade["id"], volume, deal.executionPrice, net_profit,
+                     detail.grossProfit, detail.swap, detail.commission, deal.dealId,
+                     ", clôture totale" if fully_closed else "")

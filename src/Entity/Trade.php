@@ -485,6 +485,13 @@ class Trade
 
     public function calculateGainEuro(): void
     {
+        // Trade clos avec P&L net broker complet : le gain est le net exact,
+        // pas le dérivé du RR arrondi.
+        $net = $this->exitDate !== null ? $this->getNetProfitTotal() : null;
+        if ($net !== null) {
+            $this->gainEuro = round($net, 2);
+            return;
+        }
         if ($this->gainRR !== null && $this->maxRiskEuro !== null) {
             $this->gainEuro = $this->gainRR * $this->maxRiskEuro;
         }
@@ -690,7 +697,8 @@ class Trade
      * Ajoute une sortie ; ignorée si son dealId est déjà enregistré
      * (idempotence vis-à-vis du cBot qui peut renvoyer un deal connu).
      */
-    public function addExit(float $price, float $volume, ?string $dealId, ?string $date): self
+    public function addExit(float $price, float $volume, ?string $dealId, ?string $date,
+                            ?float $netProfit = null): self
     {
         $list = $this->getExits();
         if ($dealId !== null) {
@@ -700,9 +708,34 @@ class Trade
                 }
             }
         }
-        $list[] = ['dealId' => $dealId, 'price' => $price, 'volume' => $volume, 'date' => $date];
+        $entry = ['dealId' => $dealId, 'price' => $price, 'volume' => $volume, 'date' => $date];
+        if ($netProfit !== null) {
+            $entry['netProfit'] = $netProfit;
+        }
+        $list[] = $entry;
         $this->exits = $list;
         return $this;
+    }
+
+    /**
+     * Somme des P&L nets broker (commissions, swaps et frais inclus, devise du
+     * compte) — null dès qu'une sortie n'en a pas (trade manuel ou antérieur) :
+     * on ne mélange jamais net et brut dans un même total.
+     */
+    public function getNetProfitTotal(): ?float
+    {
+        $exits = $this->getExits();
+        if ($exits === []) {
+            return null;
+        }
+        $total = 0.0;
+        foreach ($exits as $exit) {
+            if (!isset($exit['netProfit']) || !is_numeric($exit['netProfit'])) {
+                return null;
+            }
+            $total += (float) $exit['netProfit'];
+        }
+        return $total;
     }
 
     public function getExitedVolume(): float
@@ -767,15 +800,28 @@ class Trade
     }
 
     /**
-     * RR final = somme des R de chaque sortie pondérés par sa part du volume
-     * initial (le risque de référence reste toujours entrée→SL initial).
+     * RR final. Si toutes les sorties portent le P&L net du broker : net total
+     * ÷ risque au SL (riskPercentage × maxRiskEuro) — commissions et swaps
+     * comptent donc dans le R. Sinon (trade manuel/antérieur) : somme des R de
+     * chaque sortie calculés sur les prix, pondérés par sa part du volume
+     * initial (risque de référence : entrée→SL initial).
      * Ne fait rien tant que le trade n'est pas clos, si les données manquent,
      * ou si finalRR a été saisi (manuel prioritaire).
      */
     public function calculateFinalRR(): void
     {
+        if ($this->finalRR !== null || $this->exitDate === null) {
+            return;
+        }
+
+        $net = $this->getNetProfitTotal();
+        if ($net !== null && $this->riskPercentage > 0 && $this->maxRiskEuro > 0) {
+            $this->finalRR = round($net / ($this->maxRiskEuro * $this->riskPercentage / 100), 2);
+            return;
+        }
+
         $riskDistance = $this->getInitialRiskDistance();
-        if ($this->finalRR !== null || $this->exitDate === null || $riskDistance === null
+        if ($riskDistance === null
             || $this->exits === null || $this->volumeInUnits === null || $this->volumeInUnits <= 0) {
             return;
         }

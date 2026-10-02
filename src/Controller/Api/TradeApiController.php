@@ -254,14 +254,16 @@ class TradeApiController extends AbstractController
         if (array_key_exists('exit', $data) && $data['exit'] !== null) {
             $exit = $data['exit'];
             if (!is_array($exit) || !isset($exit['price'], $exit['volume'])
-                || !is_numeric($exit['price']) || !is_numeric($exit['volume'])) {
-                $errors['exit'] = 'Exit must be an object with numeric price and volume';
+                || !is_numeric($exit['price']) || !is_numeric($exit['volume'])
+                || (isset($exit['netProfit']) && !is_numeric($exit['netProfit']))) {
+                $errors['exit'] = 'Exit must be an object with numeric price and volume (and netProfit if present)';
             } else {
                 $trade->addExit(
                     (float) $exit['price'],
                     (float) $exit['volume'],
                     isset($exit['dealId']) ? (string) $exit['dealId'] : null,
                     $exit['date'] ?? null,
+                    isset($exit['netProfit']) ? (float) $exit['netProfit'] : null,
                 );
             }
         }
