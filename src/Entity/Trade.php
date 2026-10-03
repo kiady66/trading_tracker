@@ -30,7 +30,6 @@ class Trade
         'GBP/JPY',
         'GBP/CHF',
         'NZD/JPY',
-        'AUD/GBP',
         'AUD/NZD',
         'AUD/CAD',
         'NZD/CAD',

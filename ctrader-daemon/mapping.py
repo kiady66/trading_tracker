@@ -7,7 +7,7 @@ Sans dépendance au SDK pour rester testables avec un simple `python -m unittest
 SUPPORTED_ASSETS = {
     "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF", "AUD/USD", "USD/CAD", "NZD/USD",
     "EUR/GBP", "EUR/JPY", "EUR/CHF", "EUR/AUD", "EUR/CAD", "EUR/NZD", "GBP/JPY",
-    "GBP/CHF", "NZD/JPY", "AUD/GBP", "AUD/NZD", "AUD/CAD", "NZD/CAD", "NZD/CHF",
+    "GBP/CHF", "NZD/JPY", "AUD/NZD", "AUD/CAD", "NZD/CAD", "NZD/CHF",
     "AUD/CHF", "AUD/JPY", "GBP/CAD", "GBP/AUD", "GBP/NZD", "CAD/CHF", "CAD/JPY",
     "CHF/JPY",
     "BTC/USD", "ETH/USD", "XAU/USD", "SP500", "NAS100", "USOIL",

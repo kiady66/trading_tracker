@@ -1,0 +1,36 @@
+framework:
+    html_sanitizer:
+        sanitizers:
+            # Notes de la page /biais : HTML produit par l'éditeur Quill (gras,
+            # listes, titres, surlignage par classe ql-bg-*) ou collé depuis
+            # Claude Desktop. Pas de style inline ni d'image.
+            currency_note:
+                allow_elements:
+                    p: ['class']
+                    br: []
+                    strong: []
+                    b: []
+                    em: []
+                    i: []
+                    u: []
+                    s: []
+                    sub: []
+                    sup: []
+                    h1: ['class']
+                    h2: ['class']
+                    h3: ['class']
+                    h4: ['class']
+                    blockquote: ['class']
+                    pre: ['class']
+                    code: []
+                    ol: []
+                    ul: []
+                    li: ['class', 'data-list']
+                    span: ['class']
+                    a: ['href']
+                force_attributes:
+                    a:
+                        target: '_blank'
+                        rel: 'noopener noreferrer'
+                allowed_link_schemes: ['http', 'https', 'mailto']
+                max_input_length: 100000

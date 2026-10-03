@@ -1,0 +1,240 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Biais des devises - Trading Tracker{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .bias-wrap { max-width: 1280px; margin: 0 auto; }
+
+        .bias-header { margin-bottom: 1.5rem; max-width: 70ch; }
+        .bias-header p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+
+        .bias-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 300px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1000px) {
+            .bias-layout { grid-template-columns: 1fr; }
+        }
+
+        /* ── Cartes devises ── */
+        .bias-cards {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        @media (max-width: 700px) {
+            .bias-cards { grid-template-columns: 1fr; }
+        }
+
+        .bias-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-left: 4px solid #6d7178;
+            border-radius: 8px;
+            padding: 0.85rem 1rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .bias-card.bias-hawkish { border-left-color: #413ac0; }
+        .bias-card.bias-dovish  { border-left-color: #0f6b64; }
+
+        .bias-card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .bias-currency { font-weight: 700; font-size: 1.15rem; letter-spacing: 0.02em; }
+        .bias-bank { color: var(--text-muted); font-size: 0.85rem; margin-left: 0.4rem; font-variant-numeric: tabular-nums; }
+
+        .bias-select {
+            font: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 4px 28px 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #f0f1f3;
+            color: #6d7178;
+        }
+
+        .bias-hawkish .bias-select { background: #ecebfa; color: #413ac0; border-color: #413ac0; }
+        .bias-dovish  .bias-select { background: #e6f2f0; color: #0f6b64; border-color: #0f6b64; }
+        .bias-select:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+        .bias-meta { font-size: 0.78rem; color: var(--text-muted); }
+        .bias-meta.success { color: #16a34a; }
+        .bias-meta.error   { color: #dc2626; }
+
+        .bias-card-foot {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        /* ── Éditeur Quill ── */
+        .bias-card .ql-toolbar.ql-snow {
+            border: 1px solid var(--border);
+            border-bottom: 0;
+            border-radius: 6px 6px 0 0;
+            padding: 4px 6px;
+            background: #fafbfc;
+        }
+
+        .bias-card .ql-container.ql-snow {
+            border: 1px solid var(--border);
+            border-radius: 0 0 6px 6px;
+            font: inherit;
+            font-size: 0.9rem;
+        }
+
+        .bias-card .ql-editor {
+            min-height: 7rem;
+            max-height: 22rem;
+            overflow-y: auto;
+            padding: 0.6rem 0.75rem;
+            line-height: 1.45;
+        }
+
+        .bias-card .ql-editor.ql-blank::before { font-style: normal; color: var(--text-muted); left: 0.75rem; }
+        .bias-card .ql-editor h1 { font-size: 1.2rem; }
+        .bias-card .ql-editor h2 { font-size: 1.05rem; }
+        .bias-card .ql-editor h3 { font-size: 0.95rem; }
+        .bias-card .ql-snow .ql-picker { font-size: 0.85rem; }
+
+        /* ── Liste des paires ── */
+        .bias-pairs {
+            position: sticky;
+            top: 80px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .bias-pairs h2 { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.35rem; }
+        .bias-pairs h2 small { color: var(--text-muted); font-weight: 400; }
+
+        .bias-pair-list { list-style: none; margin: 0.75rem 0 0; padding: 0; }
+
+        .bias-pair {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.4rem;
+            border-bottom: 1px solid var(--border);
+            background: #fff;
+            cursor: grab;
+        }
+
+        .bias-pair:active { cursor: grabbing; }
+        .bias-pair.sortable-ghost { opacity: 0.4; }
+        .bias-pair.sortable-chosen { background: #f5f6f8; }
+        .bias-pair:last-child { border-bottom: 0; }
+
+        .bias-grip { color: var(--text-muted); }
+        .bias-pair-name { font-weight: 600; font-variant-numeric: tabular-nums; min-width: 4.8rem; }
+        .bias-pair-biases { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-left: auto; }
+
+        .bias-tag {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 999px;
+            background: #f0f1f3;
+            color: #6d7178;
+        }
+
+        .bias-tag.hawkish { background: #ecebfa; color: #413ac0; }
+        .bias-tag.dovish  { background: #e6f2f0; color: #0f6b64; }
+
+        .bias-pairs-empty { color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 0.4rem; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="bias-wrap"
+         data-controller="bias"
+         data-bias-order-url-value="{{ path('app_bias_pairs_order') }}"
+         data-bias-csrf-value="{{ csrf_token }}">
+
+        <div class="bias-header">
+            <h1 class="h4 mb-1"><i class="bi bi-arrow-left-right me-2"></i>Biais des devises</h1>
+            <p>Le biais d'une devise est celui de sa banque centrale, le même que sur la page Cycles. Les paires qui opposent une devise hawkish à une devise dovish apparaissent à droite, dans l'ordre que tu choisis.</p>
+        </div>
+
+        <div class="bias-layout">
+            <div class="bias-cards">
+                {% for card in cards %}
+                    <article class="bias-card bias-{{ card.bias }}"
+                             data-currency="{{ card.currency }}"
+                             data-controller="bias-note"
+                             data-bias-note-url-value="{{ path('app_bias_note', {currency: card.currency}) }}"
+                             data-bias-note-csrf-value="{{ csrf_token }}">
+                        <header class="bias-card-head">
+                            <div>
+                                <span class="bias-currency">{{ card.currency }}</span>
+                                <span class="bias-bank">{{ card.bank }}{% if card.rate %} · {{ card.rate }}{% endif %}</span>
+                            </div>
+                            <select class="bias-select" aria-label="Biais {{ card.currency }}"
+                                    data-url="{{ path('app_bias_bias', {currency: card.currency}) }}"
+                                    data-action="change->bias#changeBias"
+                                    {% if card.missing %}disabled title="Banque absente de la base"{% endif %}>
+                                {% for bias in biases %}
+                                    <option value="{{ bias }}" {{ card.bias == bias ? 'selected' }}>{{ bias|capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                        </header>
+
+                        <div class="bias-editor" data-bias-note-target="editor">{{ card.note|raw }}</div>
+
+                        <footer class="bias-card-foot">
+                            <button type="button" class="btn btn-sm btn-primary"
+                                    data-bias-note-target="saveButton"
+                                    data-action="bias-note#save">
+                                <i class="bi bi-save me-1"></i> Enregistrer
+                            </button>
+                            <span class="bias-meta" data-bias-note-target="status" role="status">
+                                {% if card.noteUpdatedAt %}Note du {{ card.noteUpdatedAt|date('d/m/Y à H:i') }}{% else %}Aucune note{% endif %}
+                            </span>
+                            <span class="bias-meta ms-auto">
+                                Biais du <span data-bias-updated>{{ card.biasUpdatedAt ? card.biasUpdatedAt|date('d/m/Y à H:i') : '—' }}</span>
+                            </span>
+                        </footer>
+                    </article>
+                {% endfor %}
+            </div>
+
+            <aside class="bias-pairs">
+                <h2 class="h6">Paires hawkish / dovish <small data-bias-target="pairsCount">({{ pairs|length }})</small></h2>
+                <p class="bias-meta mb-0">Glisse pour ordonner. Une paire dont une devise change de biais sort de la liste ; si elle revient, elle repart en bas.</p>
+                <ol class="bias-pair-list" data-bias-target="pairs">
+                    {% for p in pairs %}
+                        <li class="bias-pair" data-pair="{{ p.pair }}">
+                            <i class="bi bi-grip-vertical bias-grip"></i>
+                            <span class="bias-pair-name">{{ p.pair }}</span>
+                            <span class="bias-pair-biases">
+                                <span class="bias-tag {{ p.baseBias }}">{{ p.base }} {{ p.baseBias }}</span>
+                                <span class="bias-tag {{ p.quoteBias }}">{{ p.quote }} {{ p.quoteBias }}</span>
+                            </span>
+                        </li>
+                    {% else %}
+                        <li class="bias-pairs-empty">Aucune paire : il faut au moins une devise hawkish et une dovish.</li>
+                    {% endfor %}
+                </ol>
+                <p class="bias-meta mt-2 mb-0" data-bias-target="pairsStatus" role="status"></p>
+            </aside>
+        </div>
+    </div>
+{% endblock %}
