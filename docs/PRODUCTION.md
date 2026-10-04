@@ -321,6 +321,11 @@ de `CLAUDE_CODE_OAUTH_TOKEN` — vérifiés le 30/09/2026.
 - Données réelles migrées depuis la base locale le 15/09/2026 (267 trades,
   7 users, 138 screenshots) via dump SQL `--data-only --inserts`.
 - Migrations Doctrine au niveau `Version20260906000001` à cette date.
+- Tables par utilisateur de la page `/biais` (déployée le 04/10/2026,
+  `Version20261003194246`) : `currency_note` (notes HTML nettoyées côté
+  serveur) et `bias_pair` (ordre des paires hawkish/dovish, lignes recréées
+  automatiquement à partir de `central_bank.bias` — un `TRUNCATE bias_pair`
+  ne perd que l'ordre choisi). Détails : [plans/currency-bias.md](plans/currency-bias.md).
 - Snapshot local : `make snapshot` (lit `DATABASE_URL` dans `.env.local`/`.env`,
   écrit dans `snapshots/`). **Ne jamais commiter un dump SQL.**
 
