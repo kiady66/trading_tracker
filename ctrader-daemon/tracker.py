@@ -3,7 +3,8 @@
 
 Purement événementiel (pas de rattrapage, choix assumé) :
 - fill d'ouverture        → POST /api/trades (si la position n'est pas déjà trackée)
-- SL/TP modifié           → PATCH {riskPercentage, stopLoss, initialRR}
+- SL/TP modifié           → PATCH {stopLoss} (+ riskPercentage/initialRR au
+  PREMIER SL uniquement : breakeven et trailing ne changent pas le risque pris)
 - fill de clôture (reçu)  → PATCH {exit: {..., netProfit}} (+ closed sur la
   clôture totale) — netProfit = P&L net broker, commissions et swaps inclus
 
@@ -92,7 +93,8 @@ class Tracker:
         position_id = position.positionId
         existing = yield self.api.find_trade(position_id)
         if existing is not None:
-            # Renforcement de position (même id) : on rafraîchit risque et SL.
+            # Position déjà trackée (renforcement, événement en double) : on
+            # retombe sur la mise à jour SL — le risque initial, lui, est figé.
             yield self._handle_sltp_change(position)
             return
 
@@ -143,17 +145,19 @@ class Tracker:
             log.debug("SL retiré sur la position #%s (ex: rollover) — rien à mettre à jour", position_id)
             return
 
-        entry = position.price
-        rate = yield self.catalog.conversion_rate(self.catalog.quote_currency(position.tradeData.symbolId))
-        payload = {
-            "stopLoss": position.stopLoss,
-            "riskPercentage": compute_risk_percentage(
-                entry, position.stopLoss, position.tradeData.volume / VOLUME_SCALE, rate, self.max_risk),
-        }
-        if position.HasField("takeProfit"):
-            rr = compute_initial_rr(entry, position.stopLoss, position.takeProfit)
-            if rr is not None:
-                payload["initialRR"] = rr
+        payload = {"stopLoss": position.stopLoss}
+        # Risque et RR initial figés au PREMIER SL : les déplacements suivants
+        # (breakeven, trailing) ne changent pas le risque réellement pris à
+        # l'entrée — c'est lui que mesurent le R et les stats.
+        if trade.get("lastStopLoss") is None:
+            entry = position.price
+            rate = yield self.catalog.conversion_rate(self.catalog.quote_currency(position.tradeData.symbolId))
+            payload["riskPercentage"] = compute_risk_percentage(
+                entry, position.stopLoss, position.tradeData.volume / VOLUME_SCALE, rate, self.max_risk)
+            if position.HasField("takeProfit"):
+                rr = compute_initial_rr(entry, position.stopLoss, position.takeProfit)
+                if rr is not None:
+                    payload["initialRR"] = rr
 
         ok = yield self.api.patch_trade(trade["id"], payload)
         if ok:
