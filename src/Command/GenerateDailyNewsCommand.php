@@ -39,7 +39,7 @@ PÉRIMÈTRE — uniquement les NEWS qui peuvent faire bouger ces marchés :
 - Géopolitique / politique seulement si impact marché
 
 RÈGLES ÉDITORIALES STRICTES :
-- EXHAUSTIVITÉ DU CALENDRIER : vérifie explicitement le calendrier économique du %DATE% (sur Investing.com ou ForexFactory) et liste dans le tableau TOUTES les publications majeures du jour (inflation/CPI, emploi/NFP, PIB, ventes au détail, PMI, décisions et minutes de banque centrale) des pays du G10 et de la Chine. Une publication d'inflation, d'emploi ou une décision de banque centrale a en plus sa propre section si le marché a réagi — même hors États-Unis (ex : CPI canadien, emploi australien), et jamais en simple mention au détour d'une autre news.
+- EXHAUSTIVITÉ DU CALENDRIER : vérifie explicitement le calendrier économique du %DATE% (sur Investing.com ou ForexFactory ; si ces calendriers sont inaccessibles, cherche « [pays] CPI/GDP/employment %DATE% » et vérifie sur les sites officiels : BLS, Statistique Canada, Eurostat, ONS, ABS…) et liste dans le tableau TOUTES les publications majeures du jour (inflation/CPI, emploi/NFP, PIB, ventes au détail, PMI, décisions et minutes de banque centrale) des pays du G10 et de la Chine. Une publication d'inflation, d'emploi ou une décision de banque centrale a en plus sa propre section si le marché a réagi — même hors États-Unis (ex : CPI canadien, emploi australien), et jamais en simple mention au détour d'une autre news.
 - AUCUNE opinion personnelle, AUCUNE prévision, AUCUN conseil de trading, AUCUNE anticipation.
 - Uniquement les faits : ce qui a été publié, dit, décidé.
 - Le rapport est organisé PAR NEWS / PAR THÈME, jamais par actif.
