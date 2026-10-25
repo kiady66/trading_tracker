@@ -99,24 +99,27 @@ class TradeRepositoryTest extends KernelTestCase
             self::heldTrade(200, 2, '2026-01-05 09:00', '2026-01-05 15:00'),
             // Gagnant 2 jours → tranche "1 à 3 jours"
             self::heldTrade(100, 1, '2026-01-06 10:00', '2026-01-08 10:00'),
-            // Perdant 5 jours → tranche "3 à 7 jours"
+            // Perdant 5 jours → tranche "3 à 5 jours"
             self::heldTrade(-100, -1, '2026-01-09 10:00', '2026-01-14 10:00'),
+            // Perdant 6 jours → tranche "5 à 7 jours"
+            self::heldTrade(-100, -1, '2026-01-08 10:00', '2026-01-14 10:00'),
             // Perdant 10 jours → tranche "7 à 14 jours"
             self::heldTrade(-100, -1, '2026-01-05 10:00', '2026-01-15 10:00'),
             // Perdant 15 jours → tranche "plus de 14 jours"
             self::heldTrade(-100, -1, '2026-01-01 10:00', '2026-01-16 10:00'),
         ]);
 
-        $this->assertSame(5, $stats['total_trades']);
+        $this->assertSame(6, $stats['total_trades']);
         $this->assertEqualsWithDelta(1.125, $stats['avg_duration_win_days'], 1e-9); // (0,25 + 2) / 2
-        $this->assertEqualsWithDelta(10.0, $stats['avg_duration_loss_days'], 1e-9); // (5 + 10 + 15) / 3
+        $this->assertEqualsWithDelta(9.0, $stats['avg_duration_loss_days'], 1e-9); // (5 + 6 + 10 + 15) / 4
 
-        // R/jour : 0 R / (1 + 2 + 5 + 10 + 15) jours — l'intraday compte 1 jour minimum
-        $this->assertEqualsWithDelta(0.0, $stats['rr_per_day'], 1e-9);
+        // R/jour : -1 R / (1 + 2 + 5 + 6 + 10 + 15) jours — l'intraday compte 1 jour minimum
+        $this->assertEqualsWithDelta(-1 / 39, $stats['rr_per_day'], 1e-9);
 
         $this->assertSame(1, $stats['buckets']['lt1']['total_trades']);
         $this->assertSame(1, $stats['buckets']['1to3']['total_trades']);
-        $this->assertSame(1, $stats['buckets']['3to7']['total_trades']);
+        $this->assertSame(1, $stats['buckets']['3to5']['total_trades']);
+        $this->assertSame(1, $stats['buckets']['5to7']['total_trades']);
         $this->assertSame(1, $stats['buckets']['7to14']['total_trades']);
         $this->assertSame(1, $stats['buckets']['gt14']['total_trades']);
 
