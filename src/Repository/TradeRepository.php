@@ -429,7 +429,7 @@ class TradeRepository extends ServiceEntityRepository
 
         $trades = $qb->getQuery()->getResult();
 
-        $daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        $daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         $dayStats = [];
 
         foreach ($daysOrder as $day) {
@@ -467,6 +467,174 @@ class TradeRepository extends ServiceEntityRepository
         }
 
         return $dayStats;
+    }
+
+    public function getAssetStats(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->andWhere('t.exitDate IS NOT NULL');
+
+        $this->applyFilters($qb, $filters);
+
+        return $this->computeAssetStats($qb->getQuery()->getResult());
+    }
+
+    /**
+     * @param Trade[] $trades trades clôturés
+     */
+    public function computeAssetStats(array $trades): array
+    {
+        $assetStats = [];
+
+        foreach ($trades as $trade) {
+            $asset = $trade->getAsset();
+            if (!isset($assetStats[$asset])) {
+                $assetStats[$asset] = [
+                    'total_trades' => 0,
+                    'winning_trades' => 0,
+                    'total_gain_euro' => 0,
+                    'total_gain_rr' => 0,
+                    'avg_gain_euro' => 0,
+                    'avg_gain_rr' => 0,
+                    'win_rate' => 0,
+                ];
+            }
+
+            $gainEuro = $trade->getGainEuro() ?? 0;
+            $assetStats[$asset]['total_trades']++;
+            $assetStats[$asset]['total_gain_euro'] += $gainEuro;
+            $assetStats[$asset]['total_gain_rr'] += $trade->getGainRR() ?? 0;
+            if ($gainEuro > 0) {
+                $assetStats[$asset]['winning_trades']++;
+            }
+        }
+
+        foreach ($assetStats as &$stats) {
+            $stats['avg_gain_euro'] = $stats['total_gain_euro'] / $stats['total_trades'];
+            $stats['avg_gain_rr'] = $stats['total_gain_rr'] / $stats['total_trades'];
+            $stats['win_rate'] = ($stats['winning_trades'] / $stats['total_trades']) * 100;
+        }
+        unset($stats);
+
+        uasort($assetStats, fn (array $a, array $b) => $b['total_trades'] <=> $a['total_trades']);
+
+        return $assetStats;
+    }
+
+    public function getHoldingStats(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('t')
+            ->andWhere('t.exitDate IS NOT NULL')
+            ->andWhere('t.entryDate IS NOT NULL');
+
+        $this->applyFilters($qb, $filters);
+
+        return $this->computeHoldingStats($qb->getQuery()->getResult());
+    }
+
+    /**
+     * Stats de temps de détention (entryDate → exitDate).
+     *
+     * Le « R par jour » rapporte le gain aux jours de détention, chaque trade
+     * comptant au minimum 1 jour (le capital est immobilisé la journée même
+     * pour un intraday — et ça évite de diviser par quelques minutes).
+     *
+     * @param Trade[] $trades trades clôturés avec date d'entrée
+     */
+    public function computeHoldingStats(array $trades): array
+    {
+        $emptyBucket = fn (string $label) => [
+            'label' => $label,
+            'total_trades' => 0,
+            'winning_trades' => 0,
+            'total_gain_euro' => 0,
+            'total_gain_rr' => 0,
+            'avg_gain_euro' => 0,
+            'avg_gain_rr' => 0,
+            'win_rate' => 0,
+            'holding_days' => 0,
+            'rr_per_day' => 0,
+        ];
+
+        $stats = [
+            'total_trades' => 0,
+            'avg_duration_win_days' => 0,
+            'avg_duration_loss_days' => 0,
+            'rr_per_day' => 0,
+            'buckets' => [
+                'lt1' => $emptyBucket("Moins d'1 jour"),
+                '1to3' => $emptyBucket('1 à 3 jours'),
+                '3to10' => $emptyBucket('3 à 10 jours'),
+                'gt10' => $emptyBucket('Plus de 10 jours'),
+            ],
+        ];
+
+        $winDays = 0;
+        $winCount = 0;
+        $lossDays = 0;
+        $lossCount = 0;
+        $totalRR = 0;
+        $totalHoldingDays = 0;
+
+        foreach ($trades as $trade) {
+            $durationDays = ($trade->getExitDate()->getTimestamp() - $trade->getEntryDate()->getTimestamp()) / 86400;
+            $durationDays = max($durationDays, 0);
+            $holdingDays = max($durationDays, 1);
+
+            $gainEuro = $trade->getGainEuro() ?? 0;
+            $gainRR = $trade->getGainRR() ?? 0;
+
+            if ($gainEuro > 0) {
+                $winDays += $durationDays;
+                $winCount++;
+            } elseif ($gainEuro < 0) {
+                $lossDays += $durationDays;
+                $lossCount++;
+            }
+
+            $totalRR += $gainRR;
+            $totalHoldingDays += $holdingDays;
+
+            $key = match (true) {
+                $durationDays < 1 => 'lt1',
+                $durationDays <= 3 => '1to3',
+                $durationDays <= 10 => '3to10',
+                default => 'gt10',
+            };
+
+            $bucket = &$stats['buckets'][$key];
+            $bucket['total_trades']++;
+            $bucket['total_gain_euro'] += $gainEuro;
+            $bucket['total_gain_rr'] += $gainRR;
+            $bucket['holding_days'] += $holdingDays;
+            if ($gainEuro > 0) {
+                $bucket['winning_trades']++;
+            }
+            unset($bucket);
+
+            $stats['total_trades']++;
+        }
+
+        if ($winCount > 0) {
+            $stats['avg_duration_win_days'] = $winDays / $winCount;
+        }
+        if ($lossCount > 0) {
+            $stats['avg_duration_loss_days'] = $lossDays / $lossCount;
+        }
+        if ($totalHoldingDays > 0) {
+            $stats['rr_per_day'] = $totalRR / $totalHoldingDays;
+        }
+
+        foreach ($stats['buckets'] as &$bucket) {
+            if ($bucket['total_trades'] > 0) {
+                $bucket['avg_gain_euro'] = $bucket['total_gain_euro'] / $bucket['total_trades'];
+                $bucket['avg_gain_rr'] = $bucket['total_gain_rr'] / $bucket['total_trades'];
+                $bucket['win_rate'] = ($bucket['winning_trades'] / $bucket['total_trades']) * 100;
+                $bucket['rr_per_day'] = $bucket['total_gain_rr'] / $bucket['holding_days'];
+            }
+        }
+
+        return $stats;
     }
 
     public function getCalendarData(array $filters = []): array

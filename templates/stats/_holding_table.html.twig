@@ -1,0 +1,102 @@
+{# Temps de détention : durées moyennes wins/losses, perf par tranche de durée,
+   R par jour de détention. Vars : holding_stats, unit ('eur'|'rr') #}
+{% if holding_stats.total_trades > 0 %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-hourglass-split"></i> Temps de détention
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-4">
+                        <div class="col-md-4">
+                            <div class="text-muted small">Durée moyenne des gagnants</div>
+                            <div class="fs-5 fw-bold text-success">
+                                {{ holding_stats.avg_duration_win_days|number_format(1) }} j
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">
+                                Durée moyenne des perdants
+                                {% if holding_stats.avg_duration_loss_days > holding_stats.avg_duration_win_days %}
+                                    <i class="bi bi-exclamation-triangle-fill text-warning"
+                                       data-controller="tooltip"
+                                       title="Tu gardes tes perdants plus longtemps que tes gagnants : signal d'alerte classique (on laisse courir les pertes)."></i>
+                                {% endif %}
+                            </div>
+                            <div class="fs-5 fw-bold text-danger">
+                                {{ holding_stats.avg_duration_loss_days|number_format(1) }} j
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">
+                                Gain en R par jour de détention
+                                <i class="bi bi-info-circle text-muted"
+                                   data-controller="tooltip"
+                                   title="Rendement du capital immobilisé : gain total en R divisé par les jours de détention cumulés (minimum 1 jour par trade)."></i>
+                            </div>
+                            <div class="fs-5 fw-bold text-{{ holding_stats.rr_per_day >= 0 ? 'success' : 'danger' }}">
+                                {{ holding_stats.rr_per_day|number_format(2) }} R/j
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>Durée</th>
+                                <th>Nombre de trades</th>
+                                <th>Taux de réussite</th>
+                                {% if unit == 'eur' %}
+                                    <th>Gain total (€)</th>
+                                    <th>Gain moyen (€)</th>
+                                {% endif %}
+                                <th>Gain total (R)</th>
+                                <th>Gain moyen (R)</th>
+                                <th>R / jour</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for bucket in holding_stats.buckets %}
+                                <tr>
+                                    <td class="fw-bold">{{ bucket.label }}</td>
+                                    <td>{{ bucket.total_trades }}</td>
+                                    <td>
+                                        {% if bucket.total_trades > 0 %}
+                                            <span class="badge bg-{{ bucket.win_rate >= 50 ? 'success' : 'warning' }}">
+                                                {{ bucket.win_rate|number_format(1) }}%
+                                            </span>
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    {% if unit == 'eur' %}
+                                        <td class="{{ bucket.total_gain_euro >= 0 ? 'text-success' : 'text-danger' }}">
+                                            {{ bucket.total_gain_euro|number_format(2) }} €
+                                        </td>
+                                        <td class="{{ bucket.avg_gain_euro >= 0 ? 'text-success' : 'text-danger' }}">
+                                            {{ bucket.avg_gain_euro|number_format(2) }} €
+                                        </td>
+                                    {% endif %}
+                                    <td class="{{ bucket.total_gain_rr >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ bucket.total_gain_rr|number_format(2) }} R
+                                    </td>
+                                    <td class="{{ bucket.avg_gain_rr >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ bucket.avg_gain_rr|number_format(2) }} R
+                                    </td>
+                                    <td class="{{ bucket.rr_per_day >= 0 ? 'text-success' : 'text-danger' }}">
+                                        {{ bucket.rr_per_day|number_format(2) }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}

@@ -36,6 +36,8 @@ class StatsProvider
             'chart_data' => $this->normalizeChartData($this->tradeRepository->getChartData($filters), $isRR),
             'confluence_stats' => $this->normalizeConfluenceStats($this->tradeRepository->getConfluenceStats($filters), $isRR),
             'day_stats' => $this->normalizeDayStats($this->tradeRepository->getDayStats($filters), $isRR),
+            'asset_stats' => $this->normalizeAssetStats($this->tradeRepository->getAssetStats($filters), $isRR),
+            'holding_stats' => $this->normalizeHoldingStats($this->tradeRepository->getHoldingStats($filters), $isRR),
             'calendar_data' => $this->normalizeCalendarData($this->tradeRepository->getCalendarData($filters), $isRR),
         ];
     }
@@ -105,6 +107,32 @@ class StatsProvider
         }
 
         return $dayStats;
+    }
+
+    private function normalizeAssetStats(array $assetStats, bool $isRR): array
+    {
+        if (!$isRR) {
+            return $assetStats;
+        }
+
+        foreach ($assetStats as &$stats) {
+            unset($stats['total_gain_euro'], $stats['avg_gain_euro']);
+        }
+
+        return $assetStats;
+    }
+
+    private function normalizeHoldingStats(array $holdingStats, bool $isRR): array
+    {
+        if (!$isRR) {
+            return $holdingStats;
+        }
+
+        foreach ($holdingStats['buckets'] as &$bucket) {
+            unset($bucket['total_gain_euro'], $bucket['avg_gain_euro']);
+        }
+
+        return $holdingStats;
     }
 
     private function normalizeCalendarData(array $months, bool $isRR): array

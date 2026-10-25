@@ -66,4 +66,60 @@ class TradeRepositoryTest extends KernelTestCase
         $this->assertEqualsWithDelta(2.0, $stats['avg_win_rr'], 1e-9);
         $this->assertEqualsWithDelta(-1.0, $stats['avg_loss_rr'], 1e-9);
     }
+
+    public function testComputeAssetStatsGroupsAndSortsByTradeCount(): void
+    {
+        $stats = $this->repository->computeAssetStats([
+            self::trade(200, 2)->setAsset('XAU/USD'),
+            self::trade(-100, -1)->setAsset('XAU/USD'),
+            self::trade(300, 3)->setAsset('EUR/USD'),
+        ]);
+
+        $this->assertSame(['XAU/USD', 'EUR/USD'], array_keys($stats));
+
+        $gold = $stats['XAU/USD'];
+        $this->assertSame(2, $gold['total_trades']);
+        $this->assertSame(1, $gold['winning_trades']);
+        $this->assertEqualsWithDelta(50.0, $gold['win_rate'], 1e-9);
+        $this->assertEqualsWithDelta(100.0, $gold['total_gain_euro'], 1e-9);
+        $this->assertEqualsWithDelta(0.5, $gold['avg_gain_rr'], 1e-9);
+    }
+
+    private static function heldTrade(float $gainEuro, float $gainRR, string $entry, string $exit): Trade
+    {
+        return self::trade($gainEuro, $gainRR)
+            ->setEntryDate(new \DateTime($entry))
+            ->setExitDate(new \DateTime($exit));
+    }
+
+    public function testComputeHoldingStatsDurationsAndBuckets(): void
+    {
+        $stats = $this->repository->computeHoldingStats([
+            // Gagnant intraday (6 h = 0,25 j) → tranche "moins d'1 jour"
+            self::heldTrade(200, 2, '2026-01-05 09:00', '2026-01-05 15:00'),
+            // Gagnant 2 jours → tranche "1 à 3 jours"
+            self::heldTrade(100, 1, '2026-01-06 10:00', '2026-01-08 10:00'),
+            // Perdant 5 jours → tranche "3 à 10 jours"
+            self::heldTrade(-100, -1, '2026-01-09 10:00', '2026-01-14 10:00'),
+            // Perdant 15 jours → tranche "plus de 10 jours"
+            self::heldTrade(-100, -1, '2026-01-01 10:00', '2026-01-16 10:00'),
+        ]);
+
+        $this->assertSame(4, $stats['total_trades']);
+        $this->assertEqualsWithDelta(1.125, $stats['avg_duration_win_days'], 1e-9); // (0,25 + 2) / 2
+        $this->assertEqualsWithDelta(10.0, $stats['avg_duration_loss_days'], 1e-9); // (5 + 15) / 2
+
+        // R/jour : 1 R / (1 + 2 + 5 + 15) jours — l'intraday compte 1 jour minimum
+        $this->assertEqualsWithDelta(1 / 23, $stats['rr_per_day'], 1e-9);
+
+        $this->assertSame(1, $stats['buckets']['lt1']['total_trades']);
+        $this->assertSame(1, $stats['buckets']['1to3']['total_trades']);
+        $this->assertSame(1, $stats['buckets']['3to10']['total_trades']);
+        $this->assertSame(1, $stats['buckets']['gt10']['total_trades']);
+
+        $this->assertEqualsWithDelta(2.0, $stats['buckets']['lt1']['rr_per_day'], 1e-9); // 2 R / 1 j plancher
+        $this->assertEqualsWithDelta(0.5, $stats['buckets']['1to3']['rr_per_day'], 1e-9); // 1 R / 2 j
+        $this->assertEqualsWithDelta(100.0, $stats['buckets']['lt1']['win_rate'], 1e-9);
+        $this->assertEqualsWithDelta(0.0, $stats['buckets']['gt10']['win_rate'], 1e-9);
+    }
 }
