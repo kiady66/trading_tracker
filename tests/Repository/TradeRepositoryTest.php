@@ -92,6 +92,28 @@ class TradeRepositoryTest extends KernelTestCase
             ->setExitDate(new \DateTime($exit));
     }
 
+    public function testHoldingBucketBoundaries(): void
+    {
+        $this->assertSame('lt1', TradeRepository::holdingBucket(0.5));
+        $this->assertSame('1to3', TradeRepository::holdingBucket(1));
+        $this->assertSame('1to3', TradeRepository::holdingBucket(3));
+        $this->assertSame('3to5', TradeRepository::holdingBucket(5));
+        $this->assertSame('5to7', TradeRepository::holdingBucket(7));
+        $this->assertSame('7to14', TradeRepository::holdingBucket(14));
+        $this->assertSame('gt14', TradeRepository::holdingBucket(14.1));
+    }
+
+    public function testFilterByHoldingBucketKeepsMatchingClosedTrades(): void
+    {
+        $intraday = self::heldTrade(200, 2, '2026-01-05 09:00', '2026-01-05 15:00');
+        $fourDays = self::heldTrade(100, 1, '2026-01-05 10:00', '2026-01-09 10:00');
+        $open = self::trade(0, 0)->setEntryDate(new \DateTime('2026-01-05 09:00'));
+
+        $this->assertSame([$intraday], TradeRepository::filterByHoldingBucket([$intraday, $fourDays, $open], 'lt1'));
+        $this->assertSame([$fourDays], TradeRepository::filterByHoldingBucket([$intraday, $fourDays, $open], '3to5'));
+        $this->assertSame([], TradeRepository::filterByHoldingBucket([$intraday, $fourDays, $open], 'gt14'));
+    }
+
     public function testComputeHoldingStatsDurationsAndBuckets(): void
     {
         $stats = $this->repository->computeHoldingStats([

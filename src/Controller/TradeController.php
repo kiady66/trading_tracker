@@ -22,15 +22,21 @@ class TradeController extends AbstractController
     {
         $startDate = $request->query->get('start_date');
         $endDate = $request->query->get('end_date');
+        $day = $request->query->get('day');
+        $holding = $request->query->get('holding');
 
-        $trades = $tradeRepository->findByUserAndDateRange($this->getUser(), $startDate, $endDate);
+        $trades = $tradeRepository->findByUserAndDateRange($this->getUser(), $startDate, $endDate, $day, $holding);
 
         return $this->render('trade/index.html.twig', [
             'trades' => $trades,
             'filters' => [
                 'start_date' => $startDate,
                 'end_date' => $endDate,
+                'day' => $day,
+                'holding' => $holding,
             ],
+            'days' => TradeRepository::DAYS,
+            'holding_buckets' => TradeRepository::HOLDING_BUCKETS,
         ]);
     }
 

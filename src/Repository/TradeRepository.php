@@ -12,12 +12,37 @@ use Doctrine\ORM\QueryBuilder;
  */
 class TradeRepository extends ServiceEntityRepository
 {
+    /** Jours de la semaine tels que stockés dans Trade::$day (format('l')). */
+    public const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    /** Tranches de temps de détention (entrée → sortie), partagées entre stats et filtres. */
+    public const HOLDING_BUCKETS = [
+        'lt1' => "Moins d'1 jour",
+        '1to3' => '1 à 3 jours',
+        '3to5' => '3 à 5 jours',
+        '5to7' => '5 à 7 jours',
+        '7to14' => '7 à 14 jours',
+        'gt14' => 'Plus de 14 jours',
+    ];
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Trade::class);
     }
 
-    public function findByUserAndDateRange($user, ?string $startDate = null, ?string $endDate = null): array
+    public static function holdingBucket(float $durationDays): string
+    {
+        return match (true) {
+            $durationDays < 1 => 'lt1',
+            $durationDays <= 3 => '1to3',
+            $durationDays <= 5 => '3to5',
+            $durationDays <= 7 => '5to7',
+            $durationDays <= 14 => '7to14',
+            default => 'gt14',
+        };
+    }
+
+    public function findByUserAndDateRange($user, ?string $startDate = null, ?string $endDate = null, ?string $day = null, ?string $holding = null): array
     {
         $qb = $this->createQueryBuilder('t')
             ->andWhere('t.user = :user')
@@ -34,7 +59,37 @@ class TradeRepository extends ServiceEntityRepository
                 ->setParameter('end_date', new \DateTime($endDate . ' 23:59:59'));
         }
 
-        return $qb->getQuery()->getResult();
+        if (!empty($day)) {
+            $qb->andWhere('t.day = :day')
+                ->setParameter('day', $day);
+        }
+
+        $trades = $qb->getQuery()->getResult();
+
+        if (!empty($holding) && isset(self::HOLDING_BUCKETS[$holding])) {
+            $trades = self::filterByHoldingBucket($trades, $holding);
+        }
+
+        return $trades;
+    }
+
+    /**
+     * Garde les trades clôturés dont la durée de détention tombe dans la tranche.
+     *
+     * @param Trade[] $trades
+     * @return Trade[]
+     */
+    public static function filterByHoldingBucket(array $trades, string $bucket): array
+    {
+        return array_values(array_filter($trades, function (Trade $trade) use ($bucket) {
+            if ($trade->getEntryDate() === null || $trade->getExitDate() === null) {
+                return false;
+            }
+
+            $durationDays = max(($trade->getExitDate()->getTimestamp() - $trade->getEntryDate()->getTimestamp()) / 86400, 0);
+
+            return self::holdingBucket($durationDays) === $bucket;
+        }));
     }
 
     public function getStatistics(array $filters = [])
@@ -429,10 +484,9 @@ class TradeRepository extends ServiceEntityRepository
 
         $trades = $qb->getQuery()->getResult();
 
-        $daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         $dayStats = [];
 
-        foreach ($daysOrder as $day) {
+        foreach (self::DAYS as $day) {
             $dayStats[$day] = [
                 'total_trades' => 0,
                 'winning_trades' => 0,
@@ -561,14 +615,7 @@ class TradeRepository extends ServiceEntityRepository
             'avg_duration_win_days' => 0,
             'avg_duration_loss_days' => 0,
             'rr_per_day' => 0,
-            'buckets' => [
-                'lt1' => $emptyBucket("Moins d'1 jour"),
-                '1to3' => $emptyBucket('1 à 3 jours'),
-                '3to5' => $emptyBucket('3 à 5 jours'),
-                '5to7' => $emptyBucket('5 à 7 jours'),
-                '7to14' => $emptyBucket('7 à 14 jours'),
-                'gt14' => $emptyBucket('Plus de 14 jours'),
-            ],
+            'buckets' => array_map($emptyBucket, self::HOLDING_BUCKETS),
         ];
 
         $winDays = 0;
@@ -597,16 +644,7 @@ class TradeRepository extends ServiceEntityRepository
             $totalRR += $gainRR;
             $totalHoldingDays += $holdingDays;
 
-            $key = match (true) {
-                $durationDays < 1 => 'lt1',
-                $durationDays <= 3 => '1to3',
-                $durationDays <= 5 => '3to5',
-                $durationDays <= 7 => '5to7',
-                $durationDays <= 14 => '7to14',
-                default => 'gt14',
-            };
-
-            $bucket = &$stats['buckets'][$key];
+            $bucket = &$stats['buckets'][self::holdingBucket($durationDays)];
             $bucket['total_trades']++;
             $bucket['total_gain_euro'] += $gainEuro;
             $bucket['total_gain_rr'] += $gainRR;
