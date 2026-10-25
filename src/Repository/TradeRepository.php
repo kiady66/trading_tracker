@@ -564,8 +564,9 @@ class TradeRepository extends ServiceEntityRepository
             'buckets' => [
                 'lt1' => $emptyBucket("Moins d'1 jour"),
                 '1to3' => $emptyBucket('1 à 3 jours'),
-                '3to10' => $emptyBucket('3 à 10 jours'),
-                'gt10' => $emptyBucket('Plus de 10 jours'),
+                '3to7' => $emptyBucket('3 à 7 jours'),
+                '7to14' => $emptyBucket('7 à 14 jours'),
+                'gt14' => $emptyBucket('Plus de 14 jours'),
             ],
         ];
 
@@ -598,8 +599,9 @@ class TradeRepository extends ServiceEntityRepository
             $key = match (true) {
                 $durationDays < 1 => 'lt1',
                 $durationDays <= 3 => '1to3',
-                $durationDays <= 10 => '3to10',
-                default => 'gt10',
+                $durationDays <= 7 => '3to7',
+                $durationDays <= 14 => '7to14',
+                default => 'gt14',
             };
 
             $bucket = &$stats['buckets'][$key];
