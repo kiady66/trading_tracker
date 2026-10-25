@@ -26,7 +26,10 @@
                 <tr>
                     <td>Trades gagnants</td>
                     <td class="fw-bold text-success">{{ stats.winning_trades }}</td>
-                    <td>Gain RR moyen (wins)</td>
+                    <td>
+                        Gain RR moyen (wins)
+                        <i class="bi bi-info-circle text-muted" title="Moyenne du RR des trades gagnants uniquement : la taille typique d'un gain, en R."></i>
+                    </td>
                     <td class="fw-bold text-success">
                         {{ stats.avg_win_rr|default(0)|number_format(2) }}
                     </td>
@@ -34,7 +37,10 @@
                 <tr>
                     <td>Trades perdants</td>
                     <td class="fw-bold text-danger">{{ stats.losing_trades }}</td>
-                    <td>Perte RR moyenne (losses)</td>
+                    <td>
+                        Perte RR moyenne (losses)
+                        <i class="bi bi-info-circle text-muted" title="Moyenne du RR des trades perdants uniquement : la taille typique d'une perte, en R (valeur négative)."></i>
+                    </td>
                     <td class="fw-bold text-danger">
                         {{ stats.avg_loss_rr|default(0)|number_format(2) }}
                     </td>

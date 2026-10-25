@@ -45,14 +45,22 @@ class TradeRepository extends ServiceEntityRepository
 
         $this->applyFilters($qb, $filters);
 
-        $trades = $qb->getQuery()->getResult();
+        return $this->computeStatistics($qb->getQuery()->getResult());
+    }
 
+    /**
+     * @param Trade[] $trades trades clôturés, triés par date de sortie croissante
+     */
+    public function computeStatistics(array $trades): array
+    {
         $stats = [
             'total_trades' => count($trades),
             'total_gain_euro' => 0,
             'total_gain_rr' => 0,
             'avg_gain_euro' => 0,
             'avg_gain_rr' => 0,
+            'avg_win_rr' => 0,
+            'avg_loss_rr' => 0,
             'max_gain_euro' => 0,
             'min_gain_euro' => 0,
             'max_gain_rr' => 0,
@@ -79,6 +87,8 @@ class TradeRepository extends ServiceEntityRepository
         $peakRR = 0;
         $winStreak = 0;
         $lossStreak = 0;
+        $rrWinCount = 0;
+        $rrLossCount = 0;
 
         foreach ($trades as $trade) {
             $gainEuro = $trade->getGainEuro() ?? 0;
@@ -104,8 +114,10 @@ class TradeRepository extends ServiceEntityRepository
 
             if ($finalRR > 0) {
                 $stats['gross_profit_rr'] += $finalRR;
+                $rrWinCount++;
             } elseif ($finalRR < 0) {
                 $stats['gross_loss_rr'] += abs($finalRR);
+                $rrLossCount++;
             }
 
             $stats['max_win_streak'] = max($stats['max_win_streak'], $winStreak);
@@ -139,6 +151,14 @@ class TradeRepository extends ServiceEntityRepository
 
         if ($stats['gross_loss_rr'] > 0) {
             $stats['profit_factor_rr'] = $stats['gross_profit_rr'] / $stats['gross_loss_rr'];
+        }
+
+        if ($rrWinCount > 0) {
+            $stats['avg_win_rr'] = $stats['gross_profit_rr'] / $rrWinCount;
+        }
+
+        if ($rrLossCount > 0) {
+            $stats['avg_loss_rr'] = -$stats['gross_loss_rr'] / $rrLossCount;
         }
 
         // Calcul des moyennes et win rate
