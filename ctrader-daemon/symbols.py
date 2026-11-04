@@ -27,6 +27,15 @@ SPOT_PRICE_SCALE = 100000.0  # prix des ProtoOASpotEvent en 1/100000
 RATE_CACHE_SECONDS = 1800
 
 
+def extract_or_raise(res, context: str):
+    """Payload de la réponse, ou RuntimeError si c'est un ProtoOAErrorRes
+    (accéder à un champ absent lèverait un AttributeError illisible)."""
+    msg = Protobuf.extract(res)
+    if msg.DESCRIPTOR.name == "ProtoOAErrorRes":
+        raise RuntimeError(f"{context} refusé : {msg.errorCode} — {msg.description}")
+    return msg
+
+
 class SymbolCatalog:
     def __init__(self, client, account_id: int):
         self.client = client
@@ -41,15 +50,15 @@ class SymbolCatalog:
     @defer.inlineCallbacks
     def load(self):
         res = yield self.client.send(ProtoOATraderReq(ctidTraderAccountId=self.account_id))
-        trader = Protobuf.extract(res).trader
+        trader = extract_or_raise(res, "ProtoOATraderReq").trader
 
         res = yield self.client.send(ProtoOAAssetListReq(ctidTraderAccountId=self.account_id))
-        assets = {a.assetId: a.name for a in Protobuf.extract(res).asset}
+        assets = {a.assetId: a.name for a in extract_or_raise(res, "ProtoOAAssetListReq").asset}
         self.deposit_currency = assets.get(trader.depositAssetId)
 
         res = yield self.client.send(ProtoOASymbolsListReq(ctidTraderAccountId=self.account_id))
         supported = 0
-        for symbol in Protobuf.extract(res).symbol:
+        for symbol in extract_or_raise(res, "ProtoOASymbolsListReq").symbol:
             asset = normalize_symbol(symbol.symbolName)
             quote = assets.get(symbol.quoteAssetId)
             self._symbols[symbol.symbolId] = (symbol.symbolName, asset, quote)

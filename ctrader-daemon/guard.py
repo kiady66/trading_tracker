@@ -53,10 +53,11 @@ class RolloverGuard:
                  "remise à 18h15 NY (dimanche 18h15 pour le week-end)")
         self._loop = LoopingCall(self._tick)
         self._loop.start(10, now=False)
-        # Récupération : démon arrêté pendant la fenêtre → SL toujours en DB,
-        # on restaure au démarrage (uniquement les positions trackées).
+        # Récupération : démon arrêté pendant la fenêtre → SL toujours en DB.
+        # Hors fenêtre, on force la branche « remise » du premier tick, qui
+        # restaure les SL manquants et RETENTE tant qu'elle échoue.
         if not self._is_in_window(self._now_ny()):
-            self.restore_stop_losses()
+            self._in_window = True
 
     @staticmethod
     def _now_ny() -> datetime:
@@ -66,23 +67,37 @@ class RolloverGuard:
         return is_in_rollover_window(now)
 
     def _tick(self):
+        """Une erreur est loggée puis AVALÉE : un LoopingCall dont le deferred
+        échoue s'arrête définitivement (le guard est resté mort ainsi du 01 au
+        04/11/2026, sur un reconcile en erreur)."""
         if self._is_in_window(self._now_ny()):
             if not self._in_window:
                 log.info("Fenêtre de rollover ouverte — retrait des stop loss")
             self._in_window = True
             # Couvre aussi les positions ouvertes (ou re-modifiées) pendant la fenêtre.
-            return self.remove_stop_losses()
+            return self.remove_stop_losses().addErrback(self._log_failure, "retrait")
         if self._in_window:
-            self._in_window = False
             log.info("Fenêtre de rollover terminée — remise des stop loss")
-            return self.restore_stop_losses()
+            # _in_window n'est baissé qu'après une remise SANS erreur : un échec
+            # (reconcile/API) est retenté au tick suivant, jamais abandonné.
+            d = self.restore_stop_losses()
+            d.addCallback(lambda _: setattr(self, "_in_window", False))
+            return d.addErrback(self._log_failure, "remise")
+
+    @staticmethod
+    def _log_failure(failure, action: str):
+        log.error("✗ Rollover guard (%s des SL) : %s — nouvelle tentative au prochain tick",
+                  action, failure.getErrorMessage())
 
     # --- Lecture seule : positions ouvertes du compte -----------------------
 
     @defer.inlineCallbacks
     def _open_positions(self):
         res = yield self.client.send(ProtoOAReconcileReq(ctidTraderAccountId=self.account_id))
-        return list(Protobuf.extract(res).position)
+        msg = Protobuf.extract(res)
+        if msg.DESCRIPTOR.name == "ProtoOAErrorRes":
+            raise RuntimeError(f"reconcile refusé : {msg.errorCode} — {msg.description}")
+        return list(msg.position)
 
     # --- Retrait (SL sauvegardé en DB au préalable, sinon laissé en place) ---
 

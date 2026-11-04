@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 
 from ctrader_open_api import Client, EndPoints, Protobuf, TcpProtocol
@@ -41,6 +42,16 @@ log = logging.getLogger("ctrader-daemon")
 
 # Codes d'erreur Open API signalant un access token à rafraîchir.
 EXPIRED_TOKEN_ERRORS = {"CH_ACCESS_TOKEN_INVALID", "ACCESS_TOKEN_EXPIRED", "INVALID_TOKEN"}
+
+# Chaque ProtoOARefreshTokenReq invalide l'ancien access token : le serveur
+# pousse alors un ProtoOAAccountsTokenInvalidatedEvent. Y répondre par un
+# nouveau refresh crée une boucle infinie (vécue le 04/11/2026) — dans cette
+# fenêtre après un refresh réussi, l'événement est un écho à ignorer.
+INVALIDATION_ECHO_SECONDS = 60
+
+# Délai avant de retenter une authentification de compte ou un chargement de
+# catalogue qui a échoué (maintenance cTrader, erreur passagère).
+RETRY_DELAY_SECONDS = 10
 
 
 def require_env(name: str) -> str:
@@ -91,6 +102,14 @@ class Daemon:
             require_env("CTRADER_REFRESH_TOKEN"),
         )
         self.health_file = Path(os.environ.get("HEALTH_FILE", "/tmp/ctrader-daemon-health"))
+        self.health_file.touch()
+        # Le healthcheck ne doit refléter que la session COMPTE : une connexion
+        # TCP vivante (heartbeats) avec un compte déconnecté est une panne
+        # (vécue du 01 au 04/11/2026 — conteneur « healthy », démon sourd).
+        self.account_alive = False
+        self._refreshing = False        # un seul ProtoOARefreshTokenReq en vol
+        self._last_refresh_at = 0.0     # time.monotonic() du dernier refresh réussi
+        self._reauth_scheduled = False
 
         host = EndPoints.PROTOBUF_LIVE_HOST if env == "live" else EndPoints.PROTOBUF_DEMO_HOST
         log.info("Démon cTrader — %s (%s:%s), compte %s", env, host, EndPoints.PROTOBUF_PORT, self.account_id)
@@ -136,34 +155,74 @@ class Daemon:
         self.client.send(req).addCallbacks(self.on_account_auth, self.fail)
 
     def on_account_auth(self, message) -> None:
-        if self.is_error(message, "authentification compte"):
+        event = Protobuf.extract(message)
+        if event.DESCRIPTOR.name == "ProtoOAErrorRes":
+            if event.errorCode in EXPIRED_TOKEN_ERRORS:
+                self.refresh_tokens()
+            else:
+                log.error("Erreur Open API (authentification compte) : %s — %s — nouvel essai dans %ds",
+                          event.errorCode, event.description, RETRY_DELAY_SECONDS)
+                self._schedule_reauth()
             return
+        self.account_alive = True
         log.info("✓ Compte %s authentifié — chargement du catalogue de symboles…", self.account_id)
-        d = self.catalog.load()
-        d.addCallbacks(self.on_ready, self.fail)
+        self._load_catalog()
+
+    def _schedule_reauth(self) -> None:
+        if self._reauth_scheduled:
+            return
+        self._reauth_scheduled = True
+
+        def reauth():
+            self._reauth_scheduled = False
+            self.auth_account()
+
+        reactor.callLater(RETRY_DELAY_SECONDS, reauth)
+
+    def _load_catalog(self) -> None:
+        self.catalog.load().addCallbacks(self.on_ready, self._catalog_failed)
+
+    def _catalog_failed(self, failure) -> None:
+        log.error("Échec du chargement du catalogue : %s — nouvel essai dans %ds",
+                  failure.getErrorMessage(), RETRY_DELAY_SECONDS)
+        reactor.callLater(RETRY_DELAY_SECONDS, self._load_catalog)
 
     def on_ready(self, _=None) -> None:
         log.info("✓ Démon prêt — tracker en écoute des événements d'exécution")
         self.guard.start()
 
     def refresh_tokens(self) -> None:
+        if self._refreshing:
+            log.debug("Rafraîchissement de tokens déjà en cours — ignoré")
+            return
+        self._refreshing = True
         log.info("Access token expiré — rafraîchissement…")
         req = ProtoOARefreshTokenReq()
         req.refreshToken = self.tokens.refresh
-        self.client.send(req).addCallbacks(self.on_tokens_refreshed, self.fail)
+        self.client.send(req).addCallbacks(self.on_tokens_refreshed, self._refresh_failed)
 
     def on_tokens_refreshed(self, message) -> None:
-        if self.is_error(message, "rafraîchissement des tokens"):
-            return
+        self._refreshing = False
         res = Protobuf.extract(message)
+        if res.DESCRIPTOR.name == "ProtoOAErrorRes":
+            # Surtout ne pas re-rafraîchir ici : un refresh token mort boucle.
+            log.error("Échec du rafraîchissement des tokens : %s — %s — ré-authentification OAuth "
+                      "manuelle requise (voir README)", res.errorCode, res.description)
+            return
+        self._last_refresh_at = time.monotonic()
         # Spotware peut renvoyer un refreshToken vide : on garde alors l'actuel.
         self.tokens.save(res.accessToken, res.refreshToken or self.tokens.refresh)
         self.auth_account()
 
+    def _refresh_failed(self, failure) -> None:
+        self._refreshing = False
+        self.fail(failure)
+
     # --- Réception --------------------------------------------------------
 
     def on_message(self, client, message) -> None:
-        self.health_file.touch()
+        if self.account_alive:
+            self.health_file.touch()
         event = Protobuf.extract(message)
         name = event.DESCRIPTOR.name
 
@@ -175,10 +234,22 @@ class Daemon:
         elif name == "ProtoOASpotEvent":
             self.catalog.on_spot(event)
         elif name == "ProtoOAAccountsTokenInvalidatedEvent":
-            log.warning("Token invalidé par le serveur — rafraîchissement")
-            self.refresh_tokens()
-        elif name in ("ProtoOAClientDisconnectEvent", "ProtoOAAccountDisconnectEvent"):
-            log.warning("Déconnexion signalée par le serveur : %s", event)
+            if time.monotonic() - self._last_refresh_at < INVALIDATION_ECHO_SECONDS:
+                log.info("Invalidation de l'ancien access token (écho de notre refresh) — ignorée")
+            else:
+                log.warning("Token invalidé par le serveur — rafraîchissement")
+                self.account_alive = False
+                self.refresh_tokens()
+        elif name == "ProtoOAAccountDisconnectEvent":
+            # La connexion TCP, elle, reste vivante : sans ré-authentification le
+            # démon resterait sourd (panne du 01 au 04/11/2026).
+            log.warning("Compte déconnecté par le serveur — ré-authentification dans %ds", RETRY_DELAY_SECONDS)
+            self.account_alive = False
+            self._schedule_reauth()
+        elif name == "ProtoOAClientDisconnectEvent":
+            # Le serveur va couper la connexion : ClientService reconnectera et
+            # on_connected ré-authentifiera tout.
+            log.warning("Client déconnecté par le serveur : %s", event)
         elif name.endswith("Res"):
             log.debug("Réponse %s (traitée par son callback)", name)
         else:
@@ -187,6 +258,7 @@ class Daemon:
     def on_disconnected(self, client, reason) -> None:
         # ClientService (Twisted) retente automatiquement avec backoff exponentiel,
         # puis on_connected ré-authentifie tout.
+        self.account_alive = False
         log.warning("Déconnecté : %s — reconnexion automatique…", reason.getErrorMessage())
 
     # --- Erreurs ----------------------------------------------------------
