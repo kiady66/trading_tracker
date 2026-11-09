@@ -18,10 +18,10 @@ class RoutinesControllerTest extends WebTestCase
             ->getConnection()->executeStatement('TRUNCATE "user" RESTART IDENTITY CASCADE');
     }
 
-    public function testAnonymousIsRedirectedToLogin(): void
+    public function testAnonymousCanAccessPage(): void
     {
         $this->client->request('GET', '/routines');
-        $this->assertResponseRedirects('http://localhost/login');
+        $this->assertResponseIsSuccessful();
     }
 
     public function testPageRendersEveryRoutineTab(): void

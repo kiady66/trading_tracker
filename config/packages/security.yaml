@@ -67,6 +67,7 @@ security:
         - { path: ^/register$, roles: PUBLIC_ACCESS }
         - { path: ^/auth/firebase$, roles: PUBLIC_ACCESS }
         - { path: ^/$, roles: PUBLIC_ACCESS } # Page d'accueil publique
+        - { path: ^/routines, roles: PUBLIC_ACCESS } # Checklists statiques, aucune donnée utilisateur
         - { path: ^/, roles: ROLE_USER }
 
     # Configuration des rôles hiérarchiques (optionnel)

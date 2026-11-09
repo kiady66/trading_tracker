@@ -211,7 +211,7 @@ P&L time series), `getConfluenceStats()`, `getDayStats()`. All accept a
 | `/trade`, `/trade/new`, `/trade/{id}`, `/trade/{id}/edit` | Trade CRUD |
 | `/stats` | Analytics dashboard |
 | `/cycles` | Central-bank rate cycles clock (`/cycles/refresh` starts the AI rate refresh in the background, `/cycles/refresh/status` is polled by the page) |
-| `/routines` | Swing-FX routine checklists (static, state lives in the browser) |
+| `/routines` | Swing-FX routine checklists (static, state lives in the browser, public — no auth) |
 | `/biais` | Per-currency notes (Quill) and bias (shared with `/cycles`), drag-and-drop list of hawkish/dovish pairs (`/biais/{currency}/biais`, `/biais/{currency}/note`, `/biais/paires/ordre`) |
 | `/chat` | Support chat (admin side under `Controller/Admin/`) |
 | `/news` | Daily news |

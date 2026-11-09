@@ -121,7 +121,7 @@ compresses with GD and uploads to R2). Full details and diagrams:
 Form-based login (email as identifier) plus Firebase "Sign in with Google"
 (inactive in prod while `FIREBASE_*` env vars are empty). Roles: ROLE_USER,
 ROLE_ADMIN, ROLE_MODERATOR, ROLE_TRADER. All routes except `/login`, `/register`,
-and `/` require ROLE_USER.
+`/`, and `/routines` require ROLE_USER.
 
 ## Database
 
